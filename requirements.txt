@@ -1,0 +1,29 @@
+# PyTorch with CUDA support (install separately with: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124)
+# Note: CUDA-enabled PyTorch is required for GPU acceleration
+# source ../.venv/Scripts/activate
+torch>=2.6.0
+torchvision>=0.21.0
+torchaudio>=2.6.0
+accelerate
+scipy>=1.13.0
+librosa==0.10.2
+huggingface-hub>=0.28.1
+munch==4.0.0
+einops==0.8.0
+descript-audio-codec==1.0.0
+gradio==5.23.0
+pydub==0.25.1
+resemblyzer
+jiwer==3.0.3
+transformers==4.46.3
+FreeSimpleGUI==5.1.1
+soundfile==0.12.1
+sounddevice==0.5.0
+modelscope==1.18.1
+funasr==1.1.5
+numpy>=1.26.4
+hydra-core==1.3.2
+pyyaml
+python-dotenv
+streamlit>=1.28.0
+matplotlib>=3.7.0
