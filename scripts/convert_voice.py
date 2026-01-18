@@ -3,7 +3,7 @@
 Custom Voice Conversion Script for Seed-VC
 Uses the official inference.py from the repository
 
-source ../.venv/Scripts/activate
+source ./.venv/Scripts/activate
 
 python scripts/convert_voice.py   --source audio_inputs/user/input.wav   --reference audio_inputs/reference/ref.wav   --output audio_outputs/results
 

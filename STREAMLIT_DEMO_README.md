@@ -27,7 +27,7 @@ pip install -r requirements.txt
 ## Running the Demo
 
 ```bash
-source ../.venv/Scripts/activate
+source ./.venv/Scripts/activate
 streamlit run streamlit_demo.py
 ```
 
