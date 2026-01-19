@@ -85,10 +85,10 @@ class Trainer:
             available_checkpoints = glob.glob(os.path.join(self.log_dir, "DiT_epoch_*_step_*.pth"))
             if len(available_checkpoints) > 0:
                 latest_checkpoint = max(
-                    available_checkpoints, key=lambda x: int(x.split("_")[-1].split(".")[0])
+                    available_checkpoints, key=os.path.getmtime
                 )
                 earliest_checkpoint = min(
-                    available_checkpoints, key=lambda x: int(x.split("_")[-1].split(".")[0])
+                    available_checkpoints, key=os.path.getmtime
                 )
                 # delete the earliest checkpoint if we have more than 2
                 if (
@@ -375,7 +375,7 @@ class Trainer:
                 # find all checkpoints and remove old ones
                 checkpoints = glob.glob(os.path.join(self.log_dir, 'DiT_epoch_*.pth'))
                 if len(checkpoints) > 2:
-                    checkpoints.sort(key=lambda x: int(x.split('_')[-1].split('.')[0]))
+                    checkpoints.sort(key=os.path.getmtime)
                     for cp in checkpoints[:-2]:
                         os.remove(cp)
 

@@ -261,6 +261,10 @@ def crossfade(chunk1, chunk2, overlap):
 
 @torch.no_grad()
 def main(args):
+    # Clear CUDA cache to prevent previous runs from affecting this one
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        
     model, semantic_fn, f0_fn, vocoder_fn, campplus_model, mel_fn, mel_fn_args = load_models(args)
     sr = mel_fn_args['sampling_rate']
     f0_condition = args.f0_condition
@@ -410,7 +414,12 @@ def main(args):
     source_name = os.path.basename(source).split(".")[0]
     target_name = os.path.basename(target_name).split(".")[0]
     os.makedirs(args.output, exist_ok=True)
-    torchaudio.save(os.path.join(args.output, f"vc_{source_name}_{target_name}_{length_adjust}_{diffusion_steps}_{inference_cfg_rate}.wav"), vc_wave.cpu(), sr)
+    # Use soundfile backend to avoid torchcodec requirement
+    # torchaudio.save with backend="soundfile" should work, but for max robustness:
+    import soundfile as sf
+    out_path = os.path.join(args.output, f"vc_{source_name}_{target_name}_{length_adjust}_{diffusion_steps}_{inference_cfg_rate}.wav")
+    sf.write(out_path, vc_wave.cpu().squeeze().numpy(), sr)
+
 
 
 if __name__ == "__main__":

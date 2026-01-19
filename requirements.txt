@@ -25,5 +25,7 @@ numpy>=1.26.4
 hydra-core==1.3.2
 pyyaml
 python-dotenv
-streamlit>=1.28.0
+# streamlit>=1.28.0  <-- Commented out due to protobuf conflict with descript-audio-codec
 matplotlib>=3.7.0
+fastdtw==0.3.4
+protobuf==3.19.6

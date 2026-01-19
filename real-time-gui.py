@@ -976,6 +976,9 @@ if __name__ == "__main__":
             indata_tensor = torch.from_numpy(indata).float().to(self.config.device)
             if indata_tensor.ndim > 1 and indata_tensor.shape[1] > 1:
                 indata_tensor = indata_tensor.mean(dim=1) # Mono
+            elif indata_tensor.ndim > 1:
+                indata_tensor = indata_tensor.squeeze() # Remove extra dimension if [N, 1]
+
             
             # VAD first
             if device.type == "mps":
@@ -998,8 +1001,17 @@ if __name__ == "__main__":
             # The bottleneck was likely librosa.resample
             indata_16k_np = indata_16k.cpu().numpy()
             
-            res = self.vad_model.generate(input=indata_16k_np, cache=self.vad_cache, is_final=False, chunk_size=self.vad_chunk_size)
-            res_value = res[0]["value"]
+            # Safety check: Ensure indata_16k_np is not empty and has valid data
+            if indata_16k_np.size == 0 or np.all(indata_16k_np == 0):
+                res_value = []
+            else:
+                try:
+                    res = self.vad_model.generate(input=indata_16k_np, cache=self.vad_cache, is_final=False, chunk_size=self.vad_chunk_size)
+                    res_value = res[0]["value"]
+                except Exception as e:
+                    print(f"VAD Error: {e}")
+                    res_value = []
+
             print(res_value)
             if len(res_value) % 2 == 1 and not self.vad_speech_detected:
                 self.vad_speech_detected = True
