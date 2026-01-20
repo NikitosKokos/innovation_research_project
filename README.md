@@ -1,9 +1,9 @@
 # Innovation and Research Project: Voice Conversion
 
 ## Project Overview
-This project focuses on **Voice Conversion (VC)**, a technology that converts the voice of a source speaker into that of a target speaker while preserving the linguistic content and prosody. 
+This project focuses on **Voice Conversion (VC)**, a technology that converts the voice of a source speaker into that of a target speaker of russian hip-hop artist [Oxxxymiron](https://en.wikipedia.org/wiki/Oxxxymiron) while preserving the linguistic content and prosody. 
 
-I utilize the **Seed-VC** open-source models for this implementation. Seed-VC is a state-of-the-art voice conversion system capable of zero-shot voice conversion, meaning it can clone a voice without requiring training data for that specific speaker.
+I utilize the **Seed-VC** open-source models for this implementation. Seed-VC is a state-of-the-art voice conversion system capable of zero-shot voice conversion, meaning it can clone a voice without requiring training data for that specific speaker, all it takes is a sample of someone's voice (1-30 seconds), and it copies person's tembre, style and copies his voice.
 
 ## Setup Instructions
 
