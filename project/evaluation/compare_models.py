@@ -110,7 +110,7 @@ def compare_all():
          inputs = [f for f in os.listdir("audio_inputs/user") if f.endswith(".wav")]
          if inputs: source_audio = os.path.join("audio_inputs/user", inputs[0])
 
-    target_audio = "audio_inputs/reference/ref03.wav" # The target voice
+    target_audio = "audio_inputs/reference/ref01.wav" # The target voice
     
     output_dir = "audio_outputs/comparison_report"
     os.makedirs(output_dir, exist_ok=True)

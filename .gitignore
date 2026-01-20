@@ -23,6 +23,7 @@ reconstructed/
 ruff.log
 /configs/inuse/
 runs/
+AI_models/
 /garbages/
 /flagged/
 /experimental/
