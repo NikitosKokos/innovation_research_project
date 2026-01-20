@@ -1,4 +1,7 @@
 # general things to ignore
+.venv/
+venv/
+.env
 .DS_Store
 build/
 build_contrib/
