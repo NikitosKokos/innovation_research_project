@@ -50,7 +50,7 @@ def run_inference(source, target, output_path, checkpoint, config, device_str):
     if os.path.exists(output_path):
         os.remove(output_path)
         
-    cmd = f"python inference.py --source \"{source}\" --target \"{target}\" --output \"temp_out\" --config \"{config}\" --diffusion-steps 10 --inference-cfg-rate 0.7 --fp16 False"
+    cmd = f"python inference.py --source \"{source}\" --target \"{target}\" --output \"temp_out\" --config \"{config}\" --diffusion-steps 30 --inference-cfg-rate 0.7 --fp16 False"
     
     if checkpoint:
         cmd += f" --checkpoint \"{checkpoint}\""
@@ -116,7 +116,7 @@ def compare_all():
     os.makedirs(output_dir, exist_ok=True)
     
     # Checkpoints
-    ckpt_russian = "runs/russian_finetune_v2/ft_model.pth"
+    ckpt_russian = "runs/run_dit_mel_seed_uvit_whisper_small_wavenet/russian_finetune_small_v3/ft_model.pth"
     ckpt_rapper = "runs/rapper_finetune/ft_model.pth"
     
     # Default Config (Small/Whisper) - used for Original and fallback

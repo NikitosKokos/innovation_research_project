@@ -1157,11 +1157,11 @@ if __name__ == "__main__":
                 None, None, : self.sola_buffer_frame + self.sola_search_frame
             ]
 
-            cor_nom = F.conv1d(conv_input, self.sola_buffer[None, None, :])
+            cor_nom = F.conv1d(conv_input.float(), self.sola_buffer[None, None, :].float())
             cor_den = torch.sqrt(
                 F.conv1d(
-                    conv_input**2,
-                    torch.ones(1, 1, self.sola_buffer_frame, device=self.config.device),
+                    (conv_input**2).float(),
+                    torch.ones(1, 1, self.sola_buffer_frame, device=self.config.device).float(),
                 )
                 + 1e-8
             )
