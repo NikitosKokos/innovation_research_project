@@ -29,3 +29,7 @@ python-dotenv
 matplotlib>=3.7.0
 fastdtw==0.3.4
 protobuf==3.19.6
+pyloudnorm>=0.1.1
+pesq>=0.0.4
+pystoi>=0.3.3
+noisereduce>=3.0.0

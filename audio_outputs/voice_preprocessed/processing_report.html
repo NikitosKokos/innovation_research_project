@@ -1,0 +1,38 @@
+
+        <html>
+        <head>
+            <title>Reference Voice Preprocessing Comparison</title>
+            <style>
+                body { font-family: Arial; margin: 20px; }
+                table { border-collapse: collapse; width: 100%; }
+                th, td { border: 1px solid black; padding: 10px; text-align: left; }
+                th { background-color: #f0f0f0; }
+                .improvement { color: green; font-weight: bold; }
+                .error { color: red; }
+            </style>
+        </head>
+        <body>
+            <h1>Reference Voice Preprocessing Comparison</h1>
+            <table>
+                <tr>
+                    <th>File</th>
+                    <th>Raw PESQ (Self)</th>
+                    <th>Processed vs Raw PESQ</th>
+                    <th>STOI Preservation</th>
+                    <th>RMS Energy (Raw)</th>
+                    <th>RMS Energy (Processed)</th>
+                </tr>
+        
+                <tr>
+                    <td>test02.wav</td>
+                    <td>4.64</td>
+                    <td>4.36</td>
+                    <td class="improvement">0.998</td>
+                    <td>0.0687</td>
+                    <td>0.0624</td>
+                </tr>
+            
+            </table>
+        </body>
+        </html>
+        

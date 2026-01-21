@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-01-20T22:32:31.000317",
+  "config": {
+    "input_dir": "audio_inputs/reference",
+    "output_dir": "audio_outputs/reference_processed",
+    "embedding_dir": "audio_outputs/reference_processed/embeddings",
+    "sample_rate": 22050,
+    "denoising_method": "wiener",
+    "target_lufs": -23.0,
+    "compression_threshold": -15.0,
+    "compression_ratio": 3.0,
+    "compression_attack_ms": 10.0,
+    "compression_release_ms": 150.0,
+    "batch_size": 4,
+    "cache_embeddings": true,
+    "compute_metrics": true
+  },
+  "processed_files": [
+    {
+      "filename": "ref01.wav",
+      "duration_sec": 5.057687074829932,
+      "processing_steps": [
+        "denoised",
+        "normalized",
+        "compressed"
+      ],
+      "output_path": "audio_outputs/reference_processed\\ref01_processed.wav",
+      "saved": true,
+      "metrics": {
+        "original_energy": 0.06614863127470016,
+        "processed_energy": 0.06465468205190525,
+        "energy_change_db": -0.19841763984672076,
+        "original_dynamic_range_db": "18.115505",
+        "processed_dynamic_range_db": 18.050408981369557,
+        "spectral_flatness_original": 0.518332302570343,
+        "spectral_flatness_processed": 0.5210822649462613
+      },
+      "status": "success"
+    },
+    {
+      "filename": "ref01_processed.wav",
+      "duration_sec": 5.057687074829932,
+      "processing_steps": [
+        "denoised",
+        "normalized",
+        "compressed"
+      ],
+      "output_path": "audio_outputs/reference_processed\\ref01_processed_processed.wav",
+      "saved": true,
+      "metrics": {
+        "original_energy": 0.06465590000152588,
+        "processed_energy": 0.06476290629046953,
+        "energy_change_db": 0.014363368891637635,
+        "original_dynamic_range_db": "18.047358",
+        "processed_dynamic_range_db": 17.920556241382705,
+        "spectral_flatness_original": 0.5234331488609314,
+        "spectral_flatness_processed": 0.5269832191258123
+      },
+      "status": "success"
+    }
+  ],
+  "statistics": {
+    "total_files": 2,
+    "successful": 2,
+    "failed": 0,
+    "success_rate": 1.0
+  }
+}
