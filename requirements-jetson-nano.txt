@@ -1,0 +1,157 @@
+# ============================================================================
+# Requirements for NVIDIA Jetson Nano (JetPack 6.0 / L4T R36.x)
+# Python 3.10 | CUDA 12.2 | cuDNN 9.x
+# ============================================================================
+#
+# IMPORTANT: PyTorch MUST be installed manually using NVIDIA wheels.
+# Do NOT install PyTorch via pip from this file!
+#
+# Installation Steps:
+# 1. Install system dependencies (see below)
+# 2. Create fresh virtual environment
+# 3. Install PyTorch manually (see PyTorch section)
+# 4. Install torchvision/torchaudio (see PyTorch section)
+# 5. Install remaining packages: pip install -r requirements-jetson-nano.txt
+# ============================================================================
+
+# ============================================================================
+# SYSTEM DEPENDENCIES (Run BEFORE pip install)
+# ============================================================================
+# sudo apt-get update
+# sudo apt-get install -y \
+#     python3-pip \
+#     python3-dev \
+#     python3-venv \
+#     libopenblas-dev \
+#     libjpeg-dev \
+#     zlib1g-dev \
+#     libavcodec-dev \
+#     libavformat-dev \
+#     libswscale-dev \
+#     libportaudio2 \
+#     portaudio19-dev \
+#     libsndfile1 \
+#     ffmpeg \
+#     patchelf
+
+# ============================================================================
+# PYTORCH (MUST INSTALL MANUALLY - DO NOT USE PIP)
+# ============================================================================
+# RECOMMENDED: Try PyTorch 2.2.0 or 2.3.0 first (better cuDNN 9 compatibility)
+#
+# OPTION A: PyTorch 2.2.0 (Recommended - Better cuDNN 9 support)
+# Step 1: Download NVIDIA PyTorch 2.2.0 wheel
+# wget https://developer.download.nvidia.com/compute/redist/jp/v60/pytorch/torch-2.2.0a0+6a974be.nv23.11-cp310-cp310-linux_aarch64.whl -O torch-2.2.0-cp310-cp310-linux_aarch64.whl
+#
+# Step 2: Install PyTorch 2.2.0
+# pip install torch-2.2.0-cp310-cp310-linux_aarch64.whl
+#
+# Step 3: Install numpy first (required by torchvision)
+# pip install numpy==1.26.4
+#
+# Step 4: Install torchvision and torchaudio (compatible with PyTorch 2.2.0)
+# pip install torchvision==0.17.0 torchaudio==2.2.0 --no-deps
+# pip install pillow  # Required dependency for torchvision
+#
+# OPTION B: PyTorch 2.3.0 (Alternative)
+# wget https://developer.download.nvidia.com/compute/redist/jp/v60/pytorch/torch-2.3.0-cp310-cp310-linux_aarch64.whl -O torch-2.3.0-cp310-cp310-linux_aarch64.whl
+# pip install torch-2.3.0-cp310-cp310-linux_aarch64.whl
+# pip install numpy==1.26.4
+# pip install torchvision==0.18.0 torchaudio==2.3.0 --no-deps
+# pip install pillow
+#
+# OPTION C: PyTorch 2.4.0 (Latest, but has cuDNN 8/9 compatibility issues)
+# wget https://developer.download.nvidia.com/compute/redist/jp/v60/pytorch/torch-2.4.0a0+07cecf4168.nv24.05.14710581-cp310-cp310-linux_aarch64.whl -O torch-2.4.0-cp310-cp310-linux_aarch64.whl
+# pip install torch-2.4.0-cp310-cp310-linux_aarch64.whl
+# pip install numpy==1.26.4
+# pip install torchvision==0.19.0 torchaudio==2.4.0 --no-deps
+# pip install pillow
+#
+# Note: See OPTION2_PYTORCH_2.2_2.3_SETUP.md for detailed instructions
+#
+# Step 4: Fix cuDNN compatibility (KNOWN ISSUE - JetPack 6.0 + PyTorch 2.4.0)
+# ============================================================================
+# PROBLEM: PyTorch 2.4.0 wheel expects cuDNN 8 version symbols, but JetPack 6.0
+#          only provides cuDNN 9. The version requirement is hardcoded in the binary.
+#
+# WORKAROUND OPTIONS:
+#
+# Option A: Use NVIDIA's l4t-pytorch Docker Container (RECOMMENDED)
+#   docker pull dustynv/l4t-pytorch:r36.2.0
+#   This container has PyTorch pre-configured for JetPack 6.0
+#
+# Option B: Try PyTorch 2.2.0 or 2.3.0 (may have better cuDNN 9 support)
+#   Check NVIDIA forums for newer wheels: 
+#   https://forums.developer.nvidia.com/t/pytorch-for-jetpack-6-0/275200
+#
+# Option C: Build PyTorch from source (time-consuming but guaranteed to work)
+#   Clone PyTorch repo, configure for cuDNN 9, compile on device
+#
+# Option D: Downgrade to JetPack 5.x (if possible) which includes cuDNN 8
+#
+# CURRENT STATUS: The patchelf fixes (symlink + replace-needed) work partially
+# but the version symbol requirement in the ELF binary cannot be easily removed
+# without corrupting the binary structure.
+# ============================================================================
+
+# ============================================================================
+# CORE AUDIO & MATH LIBRARIES
+# ============================================================================
+# Optimized for ARM64 architecture
+numpy==1.26.4  # Use 1.26.x for better ARM64 compatibility
+scipy==1.13.0
+sounddevice==0.5.1
+soundfile==0.12.1
+librosa==0.10.2
+pydub==0.25.1
+
+# ============================================================================
+# AI & MACHINE LEARNING UTILITIES
+# ============================================================================
+huggingface-hub>=0.28.1
+transformers==4.46.3
+accelerate
+einops==0.8.0
+pyyaml
+munch==4.0.0
+
+# ============================================================================
+# AUDIO PROCESSING & VOICE CONVERSION
+# ============================================================================
+descript-audio-codec==1.0.0
+resemblyzer
+jiwer==3.0.3
+pyloudnorm>=0.1.1
+pesq>=0.0.4
+pystoi>=0.3.3
+noisereduce>=3.0.0
+
+# ============================================================================
+# CHINESE SPEECH RECOGNITION (FunASR)
+# ============================================================================
+modelscope==1.18.1
+funasr==1.1.5
+
+# ============================================================================
+# UI & VISUALIZATION (Lightweight for edge device)
+# ============================================================================
+matplotlib>=3.7.0
+gradio==5.23.0  # Web UI for demos
+FreeSimpleGUI==5.1.1  # Desktop GUI
+
+# ============================================================================
+# UTILITIES
+# ============================================================================
+hydra-core==1.3.2
+python-dotenv
+fastdtw==0.3.4
+protobuf==3.19.6
+
+# ============================================================================
+# NOTES:
+# - Some packages may need to be built from source on Jetson
+# - If you encounter "no matching distribution" errors, try:
+#   pip install --no-cache-dir <package>
+# - For packages with C extensions, ensure build tools are installed:
+#   sudo apt-get install -y build-essential python3-dev
+# ============================================================================
