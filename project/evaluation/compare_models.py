@@ -104,7 +104,7 @@ def compare_all():
     print("--- Model Comparison & Metrics ---")
     
     # Paths
-    source_audio = "audio_inputs/user/test02.wav"
+    source_audio = "audio_inputs/user/test03.wav"
     # Try to find a source if default doesn't exist
     if not os.path.exists(source_audio):
          inputs = [f for f in os.listdir("audio_inputs/user") if f.endswith(".wav")]
@@ -116,7 +116,7 @@ def compare_all():
     os.makedirs(output_dir, exist_ok=True)
     
     # Checkpoints
-    ckpt_russian = "runs/run_dit_mel_seed_uvit_whisper_small_wavenet/russian_finetune_small_v3/ft_model.pth"
+    ckpt_russian = "runs/russian_finetune_small_v3/ft_model.pth"
     ckpt_rapper = "runs/rapper_finetune/ft_model.pth"
     
     # Default Config (Small/Whisper) - used for Original and fallback
