@@ -146,6 +146,10 @@ hydra-core==1.3.2
 python-dotenv
 fastdtw==0.3.4
 protobuf==3.19.6
+tabulate
+viterbi_core
+jetson-stats
+pycuda
 
 # ============================================================================
 # NOTES:

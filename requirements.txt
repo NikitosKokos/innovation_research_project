@@ -1,33 +1,26 @@
-# --- JETSON NANO (JetPack 6.0) MANUAL INSTALLATION REQUIRED ---
-# PyTorch cannot be installed via standard pip on Jetson. You MUST run these commands manually:
-#
-# 1. Download the NVIDIA-built wheel:
-#    wget https://developer.download.nvidia.com/compute/redist/jp/v60/pytorch/torch-2.4.0a0+07cecf4168.nv24.05.14710581-cp310-cp310-linux_aarch64.whl -O torch-2.4.0-cp310-cp310-linux_aarch64.whl
-#
-# 2. Install it:
-#    pip install torch-2.4.0-cp310-cp310-linux_aarch64.whl
-#
-# 3. Install compatible torchvision/torchaudio:
-#    pip install torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
-# --------------------------------------------------------------
-
 # Core Audio & Math
-numpy==2.2.6
-scipy==1.15.3
-sounddevice==0.5.1
-soundfile==0.13.1
-librosa==0.10.2
-pydub==0.25.1
+numpy
+scipy
+sounddevice
+soundfile
+librosa
+pydub
 
 # AI Utilities
-huggingface-hub==0.34.4
-transformers==4.46.3
+huggingface-hub
+transformers
 accelerate
-einops==0.8.0
+einops
 pyyaml
-munch==4.0.0
+munch
 
-# Other dependencies from project analysis
+# PyTorch (Windows GPU support)
+# Managed via separate install command for reliability
+torch
+torchvision
+torchaudio
+
+# Other dependencies
 descript-audio-codec==1.0.0
 gradio==5.23.0
 resemblyzer
@@ -44,3 +37,4 @@ pyloudnorm>=0.1.1
 pesq>=0.0.4
 pystoi>=0.3.3
 noisereduce>=3.0.0
+tabulate

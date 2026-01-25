@@ -411,8 +411,8 @@ def main(args):
     time_vc_end = time.time()
     print(f"RTF: {(time_vc_end - time_vc_start) / vc_wave.size(-1) * sr}")
 
-    source_name = os.path.basename(source).split(".")[0]
-    target_name = os.path.basename(target_name).split(".")[0]
+    source_name = os.path.splitext(os.path.basename(source.replace("\\", "/")))[0]
+    target_name = os.path.splitext(os.path.basename(target_name.replace("\\", "/")))[0]
     os.makedirs(args.output, exist_ok=True)
     # Use soundfile backend to avoid torchcodec requirement
     # torchaudio.save with backend="soundfile" should work, but for max robustness:

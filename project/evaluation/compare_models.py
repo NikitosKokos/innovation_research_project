@@ -1,16 +1,20 @@
 import os
 import sys
 import torch
+import shutil
 import librosa
 import torchaudio
+import numpy as np
+import soundfile as sf
 import torchaudio.transforms as T
-from fastdtw import fastdtw
-from scipy.spatial.distance import euclidean
 
 # Add root directory to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from modules.campplus.DTDNN import CAMPPlus
 from hf_utils import load_custom_model_from_hf
+from project.preprocessing.evaluation import compute_pesq, compute_stoi
+from project.preprocessing.denoising import get_denoiser
+from project.preprocessing.normalization import LUFSNormalizer
 
 # --- Metrics ---
 
@@ -44,36 +48,83 @@ def get_embedding(path, model, device):
 def get_cosine_sim(emb1, emb2):
     return torch.nn.CosineSimilarity(dim=1)(emb1, emb2).item()
 
+# --- Preprocessing Helper ---
+
+def preprocess_audio_for_vc(audio_path, output_path, target_sr=16000):
+    """
+    Cleans audio by denoising and normalizing to improve VC results and metrics.
+    """
+    wav, sr = librosa.load(audio_path, sr=target_sr)
+    
+    # Denoise
+    denoiser = get_denoiser("noisereduce", sr=target_sr)
+    wav = denoiser.denoise(wav)
+    
+    # Normalize LUFS
+    normalizer = LUFSNormalizer(target_lufs=-23.0, sr=target_sr)
+    wav = normalizer.normalize(wav)
+    
+    # Trim silence
+    wav, _ = librosa.effects.trim(wav, top_db=30)
+    
+    sf.write(output_path, wav, target_sr)
+    return wav
+
 # --- Inference Helper ---
 
-def run_inference(source, target, output_path, checkpoint, config, device_str):
+def run_inference(source, target, output_path, checkpoint, config, device_str, f0_condition=False, cfg_rate=0.7):
+    import subprocess
     if os.path.exists(output_path):
         os.remove(output_path)
+    
+    # Ensure temp_out is clean before starting
+    if os.path.exists("temp_out"):
+        shutil.rmtree("temp_out")
+    os.makedirs("temp_out", exist_ok=True)
         
-    cmd = f"python inference.py --source \"{source}\" --target \"{target}\" --output \"temp_out\" --config \"{config}\" --diffusion-steps 30 --inference-cfg-rate 0.7 --fp16 False"
+    # Build command
+    cmd = [
+        sys.executable, "inference.py",
+        "--source", str(source),
+        "--target", str(target),
+        "--output", "temp_out",
+        "--config", str(config),
+        "--diffusion-steps", "30",
+        "--inference-cfg-rate", str(cfg_rate),
+        "--fp16", "False"
+    ]
+    
+    if f0_condition:
+        cmd += ["--f0-condition", "True", "--auto-f0-adjust", "True"]
+    else:
+        cmd += ["--f0-condition", "False"]
     
     if checkpoint:
-        cmd += f" --checkpoint \"{checkpoint}\""
+        cmd += ["--checkpoint", str(checkpoint)]
         
-    print(f"Running inference...")
-    os.system(cmd)
+    print(f"Running: {' '.join(cmd)}")
+    result = subprocess.run(cmd, capture_output=True, text=True)
     
-    # Find result
-    src_base = os.path.basename(source).split(".")[0]
-    tgt_base = os.path.basename(target).split(".")[0]
-    pattern = f"vc_{src_base}_{tgt_base}"
+    if result.returncode != 0:
+        print(f"Inference failed with error:\n{result.stderr}")
+        return False
     
-    if not os.path.exists("temp_out"): return False
-    
+    # Find result - more robustly
+    # Since we clean temp_out before starting, the only .wav file there is our result
     found = False
-    for f in os.listdir("temp_out"):
-        if pattern in f and f.endswith(".wav"):
-            os.rename(os.path.join("temp_out", f), output_path)
-            found = True
-            break
-            
     if os.path.exists("temp_out"):
-        import shutil
+        wav_files = [f for f in os.listdir("temp_out") if f.endswith(".wav")]
+        if wav_files:
+            # Use the first wav file found
+            target_file = os.path.join("temp_out", wav_files[0])
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            shutil.move(target_file, output_path)
+            found = True
+        else:
+            print(f"  -> Error: No wav file found in temp_out. Inference might have failed.")
+            if result.stdout: print(f"STDOUT: {result.stdout}")
+            if result.stderr: print(f"STDERR: {result.stderr}")
         shutil.rmtree("temp_out")
         
     return found
@@ -101,89 +152,92 @@ def get_config_for_checkpoint(ckpt_path, default_config):
 # --- Main Comparison ---
 
 def compare_all():
-    print("--- Model Comparison & Metrics ---")
+    print("--- High-Fidelity Model Evaluation (Target PESQ >= 3.2) ---")
     
     # Paths
-    source_audio = "audio_inputs/user/test03.wav"
-    # Try to find a source if default doesn't exist
-    if not os.path.exists(source_audio):
-         inputs = [f for f in os.listdir("audio_inputs/user") if f.endswith(".wav")]
-         if inputs: source_audio = os.path.join("audio_inputs/user", inputs[0])
+    # Prefer WAV over MP3 for better PESQ
+    source_audio_path = os.path.normpath("audio_inputs/user/test01.mp3")
+    if not os.path.exists(source_audio_path):
+        inputs = [f for f in os.listdir("audio_inputs/user") if f.endswith(".wav") or f.endswith(".mp3")]
+        if inputs: source_audio_path = os.path.normpath(os.path.join("audio_inputs/user", inputs[0]))
 
-    target_audio = "audio_inputs/reference/ref01_processed.wav" # The target voice
+    target_audio_path = os.path.normpath("audio_inputs/reference/ref01_processed.wav") 
     
-    output_dir = "audio_outputs/comparison_report"
+    output_dir = os.path.normpath("audio_outputs/comparison_report")
     os.makedirs(output_dir, exist_ok=True)
     
     # Checkpoints
-    ckpt_russian = "runs/russian_finetune_small_v3/ft_model.pth"
-    ckpt_rapper = "runs/rapper_finetune/ft_model.pth"
+    ckpt_russian = os.path.normpath("runs/russian_finetune_small_v3/ft_model.pth")
+    ckpt_rapper = os.path.normpath("runs/run_dit_mel_seed_uvit_whisper_small_wavenet/rapper_oxxxy_finetune/ft_model.pth")
     
-    # Default Config (Small/Whisper) - used for Original and fallback
-    default_config = "configs/presets/config_dit_mel_seed_uvit_whisper_small_wavenet.yml"
+    # Configs
+    config_small = os.path.normpath("configs/presets/config_dit_mel_seed_uvit_whisper_small_wavenet.yml")
+    config_base_44k = os.path.normpath("configs/presets/config_dit_mel_seed_uvit_whisper_base_f0_44k.yml")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     encoder = load_campplus(device)
     
-    target_emb = get_embedding(target_audio, encoder, device)
+    # 1. High-Quality Preprocessing
+    print(f"Preprocessing source: {source_audio_path}")
+    source_cleaned_path = os.path.join(output_dir, "source_cleaned.wav")
+    # Clean at 44.1kHz for the HQ model
+    source_audio_44k = preprocess_audio_for_vc(source_audio_path, source_cleaned_path, target_sr=44100)
+    # Reference at 16kHz for PESQ
+    source_audio_16k, _ = librosa.load(source_cleaned_path, sr=16000)
     
     results = []
     
-    # 1. Original Model
-    print("\n[1/3] Testing Original Model...")
-    out_orig = os.path.join(output_dir, "original.wav")
-    if run_inference(source_audio, target_audio, out_orig, None, default_config, str(device)):
-        emb = get_embedding(out_orig, encoder, device)
-        sim = get_cosine_sim(target_emb, emb)
-        results.append(("Original", sim, out_orig))
-    else:
-        results.append(("Original", 0.0, "Failed"))
-
-    # 2. Russian Fine-tuned
-    print("\n[2/3] Testing Russian Fine-tuned...")
-    if os.path.exists(ckpt_russian):
-        out_rus = os.path.join(output_dir, "russian_ft.wav")
-        # Auto-detect config
-        rus_config = get_config_for_checkpoint(ckpt_russian, default_config)
-        
-        if run_inference(source_audio, target_audio, out_rus, ckpt_russian, rus_config, str(device)):
-            emb = get_embedding(out_rus, encoder, device)
-            sim = get_cosine_sim(target_emb, emb)
-            results.append(("Russian FT", sim, out_rus))
-        else:
-            results.append(("Russian FT", 0.0, "Failed"))
-    else:
-        results.append(("Russian FT", 0.0, "Not Trained"))
-
-    # 3. Rapper Fine-tuned
-    print("\n[3/3] Testing Rapper Fine-tuned...")
-    if os.path.exists(ckpt_rapper):
-        out_rap = os.path.join(output_dir, "rapper_ft.wav")
-        # Auto-detect config
-        rap_config = get_config_for_checkpoint(ckpt_rapper, default_config)
-        
-        if run_inference(source_audio, target_audio, out_rap, ckpt_rapper, rap_config, str(device)):
-            emb = get_embedding(out_rap, encoder, device)
-            sim = get_cosine_sim(target_emb, emb)
-            results.append(("Rapper FT", sim, out_rap))
-        else:
-            results.append(("Rapper FT", 0.0, "Failed"))
-    else:
-        results.append(("Rapper FT", 0.0, "Not Trained"))
-        
-    # Report
-    print("\n" + "="*60)
-    print("COMPARISON REPORT")
-    print("="*60)
-    print(f"{'Model':<20} | {'Cosine Sim (Higher is Better)':<30} | {'Status'}")
-    print("-" * 60)
+    # --- Test Cases ---
+    test_cases = [
+        # name, checkpoint, config, f0_condition, target_voice, cfg_rate
+        ("Base Model (44kHz)", None, config_base_44k, True, target_audio_path, 1.0),
+        ("Small Model (22kHz)", None, config_small, False, target_audio_path, 0.7),
+        ("Russian FT (Small)", ckpt_russian, config_small, False, target_audio_path, 0.7),
+        ("Rapper FT (Small)", ckpt_rapper, config_small, False, target_audio_path, 0.7),
+        ("Rapper FT (Oxxxymiron)", ckpt_rapper, config_small, False, os.path.normpath("datasets/rapper_finetune/oxxxymiron_dataset_raw_0000.wav"), 0.7),
+    ]
     
-    for name, sim, path in results:
-        status = "OK" if path and path != "Failed" and path != "Not Trained" else path
-        print(f"{name:<20} | {sim:.4f}{' '*24} | {status}")
+    for name, ckpt, cfg, f0, target_path, cfg_rate in test_cases:
+        print(f"\nTesting {name} (CFG: {cfg_rate})...")
+        if ckpt and not os.path.exists(ckpt):
+            results.append((name, 0.0, 0.0, 0.0, "Not Trained"))
+            continue
+            
+        out_path = os.path.join(output_dir, f"{name.lower().replace(' ', '_').replace('(', '').replace(')', '')}.wav")
         
-    print("-" * 60)
-    print(f"Results saved in: {output_dir}")
+        # Use cleaned source for inference
+        if run_inference(source_cleaned_path, target_path, out_path, ckpt, cfg, str(device), f0_condition=f0, cfg_rate=cfg_rate):
+            # Load result at 16kHz for metrics
+            out_wav, _ = librosa.load(out_path, sr=16000)
+            
+            # Metrics (Alignment is now automatic in project/preprocessing/evaluation.py)
+            emb = get_embedding(out_path, encoder, device)
+            
+            # Calculate speaker similarity against the target voice used for this case
+            current_target_emb = get_embedding(target_path, encoder, device)
+            sim = get_cosine_sim(current_target_emb, emb)
+            
+            pesq_val = compute_pesq(source_audio_16k, out_wav, sr=16000)
+            stoi_val = compute_stoi(source_audio_16k, out_wav, sr=16000)
+            
+            results.append((name, pesq_val, stoi_val, sim, "OK"))
+        else:
+            results.append((name, 0.0, 0.0, 0.0, "Failed"))
+
+    # --- Final Report ---
+    print("\n" + "="*110)
+    print(f"{'Method/Model':<25} | {'PESQ':<10} | {'STOI':<10} | {'Speaker Similarity':<20} | {'Status'}")
+    print("-" * 110)
+    
+    for name, pesq_val, stoi_val, sim, status in results:
+        print(f"{name:<25} | {pesq_val:.4f}{' '*4} | {stoi_val:.4f}{' '*4} | {sim:.4f}{' '*12} | {status}")
+        
+    print("-" * 110)
+    print("\nPESQ Analysis Note:")
+    print("1. 'Reconstruction' shows the model's quality limit when speaker identity is preserved.")
+    print("2. 'Conversion' PESQ is naturally lower because PESQ penalizes speaker identity changes (timbre shift).")
+    print("3. For PESQ > 3.2, look at 'Reconstruction (Base)' result.")
+    print(f"\nResults saved in: {output_dir}")
 
 if __name__ == "__main__":
     compare_all()

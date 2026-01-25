@@ -82,8 +82,8 @@ class Transformer(nn.Module):
         self.layers = nn.ModuleList(TransformerBlock(config) for _ in range(config.n_layer))
         self.norm = AdaptiveLayerNorm(config.dim, RMSNorm(config.dim, eps=config.norm_eps))
 
-        self.freqs_cis: Optional[Tensor] = None
-        self.mask_cache: Optional[Tensor] = None
+        self.register_buffer("freqs_cis", None, persistent=False)
+        self.register_buffer("causal_mask", None, persistent=False)
         self.max_batch_size = -1
         self.max_seq_length = -1
 
@@ -94,12 +94,35 @@ class Transformer(nn.Module):
         max_seq_length = find_multiple(max_seq_length, 8)
         self.max_seq_length = max_seq_length
         self.max_batch_size = max_batch_size
-        dtype = self.norm.project_layer.weight.dtype
-        device = self.norm.project_layer.weight.device
+        
+        # Robustly detect dtype and device (handles quantized models)
+        device = torch.device('cpu')
+        dtype = torch.float32
+        
+        # Try to find device from any parameter or buffer
+        try:
+            param = next(self.parameters())
+            device = param.device
+            dtype = param.dtype
+        except (StopIteration, Exception):
+            try:
+                buf = next(self.buffers())
+                device = buf.device
+                dtype = buf.dtype
+            except (StopIteration, Exception):
+                pass
+        
+        # Quantized models are always float32 for these computations on CPU
+        if dtype == torch.qint8 or dtype == torch.quint8:
+            dtype = torch.float32
 
-        self.freqs_cis = precompute_freqs_cis(self.config.block_size, self.config.head_dim,
+        freqs_cis = precompute_freqs_cis(self.config.block_size, self.config.head_dim,
                                               self.config.rope_base, dtype).to(device)
-        self.causal_mask = torch.tril(torch.ones(self.max_seq_length, self.max_seq_length, dtype=torch.bool)).to(device)
+        self.register_buffer("freqs_cis", freqs_cis, persistent=False)
+        
+        causal_mask = torch.tril(torch.ones(self.max_seq_length, self.max_seq_length, dtype=torch.bool)).to(device)
+        self.register_buffer("causal_mask", causal_mask, persistent=False)
+        
         self.use_kv_cache = use_kv_cache
         self.uvit_skip_connection = self.config.uvit_skip_connection
         if self.uvit_skip_connection:
@@ -360,7 +383,14 @@ class TimestepEmbedder(nn.Module):
 
     def forward(self, t):
         t_freq = self.timestep_embedding(t)
-        t_emb = self.mlp(t_freq)
+        # Robustly ensure t_freq matches the precision of the MLP weights
+        try:
+            target_dtype = next(self.mlp.parameters()).dtype
+        except (StopIteration, AttributeError):
+            # Fallback for quantized models or modules without parameters
+            target_dtype = torch.float32
+        
+        t_emb = self.mlp(t_freq.to(target_dtype))
         return t_emb
 
 
@@ -382,8 +412,17 @@ class StyleEmbedder(nn.Module):
             labels = self.token_drop(labels, force_drop_ids)
         else:
             labels = self.style_in(labels)
-        embeddings = labels
-        return embeddings
+        
+        # Ensure output matches expected precision of the rest of the model
+        try:
+            target_dtype = next(self.parameters()).dtype
+            # Skip casting if it's a quantized type
+            if target_dtype not in [torch.qint8, torch.quint8]:
+                labels = labels.to(target_dtype)
+        except (StopIteration, Exception):
+            pass
+            
+        return labels
 
 class FinalLayer(nn.Module):
     """
