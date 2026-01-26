@@ -29,6 +29,7 @@ class Trainer:
                  steps=1000,
                  save_interval=500,
                  max_epochs=1000,
+                 learning_rate=0.0001,
                  device="cuda:0",
                  ):
         self.device = device
@@ -67,14 +68,16 @@ class Trainer:
 
         scheduler_params = {
             "warmup_steps": 0,
-            "base_lr": 0.00001,
+            "base_lr": learning_rate,
         }
 
         self.model_params = recursive_munch(config['model_params'])
         self.model = build_model(self.model_params, stage='DiT')
 
         _ = [self.model[key].to(device) for key in self.model]
-        self.model.cfm.estimator.setup_caches(max_batch_size=batch_size, max_seq_length=8192)
+        # Optimized: Reduce max_seq_length from 8192 to 2048. 
+        # 2048 is enough for ~23s of audio at 22kHz/256hop.
+        self.model.cfm.estimator.setup_caches(max_batch_size=batch_size, max_seq_length=2048)
 
         # initialize optimizers after preparing models for compatibility with FSDP
         self.optimizer = build_optimizer({key: self.model[key] for key in self.model},
@@ -409,6 +412,7 @@ def main(args):
         max_epochs=args.max_epochs,
         save_interval=args.save_every,
         num_workers=args.num_workers,
+        learning_rate=args.learning_rate,
         device=args.device
     )
     trainer.train()
@@ -428,6 +432,7 @@ if __name__ == '__main__':
     parser.add_argument('--max-epochs', type=int, default=1000)
     parser.add_argument('--save-every', type=int, default=500)
     parser.add_argument('--num-workers', type=int, default=0)
+    parser.add_argument('--learning-rate', type=float, default=0.0001)
     parser.add_argument("--gpu", type=int, help="Which GPU id to use", default=0)
     args = parser.parse_args()
     if torch.backends.mps.is_available():

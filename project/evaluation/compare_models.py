@@ -156,7 +156,7 @@ def compare_all():
     
     # Paths
     # Prefer WAV over MP3 for better PESQ
-    source_audio_path = os.path.normpath("audio_inputs/user/test01.mp3")
+    source_audio_path = os.path.normpath("audio_inputs/user/test02.wav")
     if not os.path.exists(source_audio_path):
         inputs = [f for f in os.listdir("audio_inputs/user") if f.endswith(".wav") or f.endswith(".mp3")]
         if inputs: source_audio_path = os.path.normpath(os.path.join("audio_inputs/user", inputs[0]))
@@ -168,7 +168,7 @@ def compare_all():
     
     # Checkpoints
     ckpt_russian = os.path.normpath("runs/russian_finetune_small_v3/ft_model.pth")
-    ckpt_rapper = os.path.normpath("runs/run_dit_mel_seed_uvit_whisper_small_wavenet/rapper_oxxxy_finetune/ft_model.pth")
+    ckpt_rapper = os.path.normpath("runs/rapper_oxxxy_finetune/ft_model.pth")
     
     # Configs
     config_small = os.path.normpath("configs/presets/config_dit_mel_seed_uvit_whisper_small_wavenet.yml")
@@ -194,7 +194,7 @@ def compare_all():
         ("Small Model (22kHz)", None, config_small, False, target_audio_path, 0.7),
         ("Russian FT (Small)", ckpt_russian, config_small, False, target_audio_path, 0.7),
         ("Rapper FT (Small)", ckpt_rapper, config_small, False, target_audio_path, 0.7),
-        ("Rapper FT (Oxxxymiron)", ckpt_rapper, config_small, False, os.path.normpath("datasets/rapper_finetune/oxxxymiron_dataset_raw_0000.wav"), 0.7),
+        ("Rapper FT (Oxxxymiron)", ckpt_russian, config_small, False, os.path.normpath("datasets/rapper_finetune_preprocessed/oxxxymiron_dataset_raw_0070.wav"), 0.7),
     ]
     
     for name, ckpt, cfg, f0, target_path, cfg_rate in test_cases:

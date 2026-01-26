@@ -4,11 +4,19 @@ import queue
 import threading
 import time
 import sys
+from .lite_preprocessing import LitePreprocessor
 
 class VoiceConversionStream:
     def __init__(self, config, model):
         self.config = config
         self.model = model
+        
+        # Lite Preprocessor for Edge Optimization
+        self.preprocessor = LitePreprocessor(
+            sample_rate=config.SAMPLE_RATE,
+            noise_gate_db=-45.0, # Adjustable threshold
+            high_pass_freq=80.0
+        )
         
         # Queues for passing audio between threads
         self.input_queue = queue.Queue()
@@ -76,6 +84,9 @@ class VoiceConversionStream:
                 # --- INFERENCE ---
                 # Flatten input chunk (channels, samples) -> (samples,)
                 input_mono = input_chunk.flatten()
+                
+                # 1. Lite Preprocessing (Noise Gate + High Pass)
+                input_mono = self.preprocessor.process(input_mono)
                 
                 # Run Voice Conversion
                 converted_chunk = self.model.process_chunk(input_mono)

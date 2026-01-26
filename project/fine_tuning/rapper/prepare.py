@@ -9,63 +9,152 @@ import torch
 # Add root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')))
 from hf_utils import load_custom_model_from_hf
-from project.preprocessing.denoising import WienerDenoiser
+# Import advanced preprocessing components
+from project.preprocessing.denoising import get_denoiser
 from project.preprocessing.normalization import LUFSNormalizer
+from project.preprocessing.compression import DynamicRangeCompressor
 
-def process_and_slice_audio(file_path, output_dir, target_sr=44100, min_len=3, max_len=15):
+def process_and_slice_audio(file_path, output_dir, target_sr=44100, min_len=10, max_len=20):
     print(f"Loading {os.path.basename(file_path)}...")
     y, sr = librosa.load(file_path, sr=target_sr, mono=True)
     
-    # 1. Denoise
-    print("Applying denoising (Wiener filter)...")
-    denoiser = WienerDenoiser(sr=target_sr)
+    # --- Advanced Preprocessing Pipeline ---
+    
+    # 1. Denoise (using noisereduce if available, else Wiener)
+    # Note: Noisereduce is better but might be slow on huge files. 
+    # Since we are offline preparing, quality > speed.
+    print("1. Applying Denoising (noisereduce - gentle mode)...")
+    # Reduced aggressiveness handled in get_denoiser now (prop_decrease=0.7)
+    denoiser = get_denoiser("noisereduce", sr=target_sr)
     y = denoiser.denoise(y)
     
-    # 2. Normalize (LUFS)
-    print("Applying LUFS normalization...")
-    normalizer = LUFSNormalizer(target_lufs=-23.0, sr=target_sr)
+    # 2. Normalize (LUFS) - Boosted Target
+    # -23 LUFS is broadcast standard but often too quiet for training if source was mastered loud
+    # -14 LUFS is typical streaming standard (louder, clearer)
+    print("2. Applying Normalization (-14 LUFS)...")
+    normalizer = LUFSNormalizer(target_lufs=-14.0, sr=target_sr)
     y = normalizer.normalize(y)
     
-    # 3. Slice based on energy (Simple VAD)
-    print(f"Slicing into {min_len}-{max_len}s chunks...")
+    # 3. Dynamic Range Compression
+    # Finding the "sweet spot" to tame screams without squashing everything
+    print("3. Applying Dynamic Range Compression (Ratio 15.0, -10dB Threshold)...")
+    compressor = DynamicRangeCompressor(
+        threshold_db=-15.0,  # Middle ground between safety and aggressive
+        ratio=15.0,          # Firm but not total "brick wall"
+        attack_ms=3.0,       # Fast enough to catch transients
+        release_ms=50.0,     # Standard release for natural recovery
+        sr=target_sr
+    )
+    y = compressor.compress(y)
+    
+    # 4. Slice based on energy (Simple VAD)
+    print(f"4. Slicing into {min_len}-{max_len}s chunks...")
     base_name = os.path.splitext(os.path.basename(file_path))[0]
     
-    # top_db=45 is better for rap which has a high dynamic range
-    intervals = librosa.effects.split(y, top_db=45)
+    # top_db=40 is more relaxed. Keeps almost all natural breaths and tails.
+    intervals = librosa.effects.split(y, top_db=40)
     
     chunk_count = 0
-    for start_idx, end_idx in intervals:
-        segment = y[start_idx:end_idx]
-        duration = len(segment) / target_sr
+    
+    # --- FALLBACK LOGIC ---
+    total_duration = len(y) / target_sr
+    vad_duration = sum([(end - start) for start, end in intervals]) / target_sr
+    
+    print(f"  - Total Duration: {total_duration:.2f}s")
+    print(f"  - VAD Kept Duration: {vad_duration:.2f}s")
+    print(f"  - Number of Intervals: {len(intervals)}")
+    
+    use_fixed_slicing = False
+    
+    if vad_duration < (total_duration * 0.4) or len(intervals) == 0:
+        print(f"Warning: VAD only kept {vad_duration:.1f}s. Switching to fixed slicing.")
+        use_fixed_slicing = True
+    elif total_duration > 60 and len(intervals) < 3:
+         print(f"Warning: Very few segments found. Switching to fixed slicing.")
+         use_fixed_slicing = True
         
-        if duration < min_len:
-            continue
+    if not use_fixed_slicing:
+        # Try Standard VAD Slicing
+        print("  - Processing VAD intervals with stitching...")
+        
+        current_segment = []
+        current_duration = 0
+        
+        for i, (start_idx, end_idx) in enumerate(intervals):
+            segment = y[start_idx:end_idx]
+            duration = len(segment) / target_sr
             
-        # If segment is too long, split it further
-        if duration > max_len:
-            num_sub_chunks = int(np.ceil(duration / 10.0)) # target ~10s sub-chunks
-            sub_chunk_samples = len(segment) // num_sub_chunks
-            for i in range(num_sub_chunks):
-                sub_segment = segment[i*sub_chunk_samples : (i+1)*sub_chunk_samples]
-                if len(sub_segment) / target_sr >= min_len:
+            # Add to current buffer
+            current_segment.append(segment)
+            current_duration += duration
+            
+            # If we reached min_len
+            if current_duration >= min_len:
+                full_segment = np.concatenate(current_segment)
+                
+                if current_duration > max_len:
+                    # Split huge segments
+                    num_sub_chunks = int(np.ceil(current_duration / 10.0))
+                    sub_chunk_samples = len(full_segment) // num_sub_chunks
+                    for k in range(num_sub_chunks):
+                        sub_segment = full_segment[k*sub_chunk_samples : (k+1)*sub_chunk_samples]
+                        if len(sub_segment) / target_sr >= 2.0:
+                            out_path = os.path.join(output_dir, f"{base_name}_{chunk_count:04d}.wav")
+                            sf.write(out_path, sub_segment, target_sr)
+                            chunk_count += 1
+                else:
                     out_path = os.path.join(output_dir, f"{base_name}_{chunk_count:04d}.wav")
-                    sf.write(out_path, sub_segment, target_sr)
+                    sf.write(out_path, full_segment, target_sr)
                     chunk_count += 1
-        else:
+                
+                # Reset buffer
+                current_segment = []
+                current_duration = 0
+        
+        # Handle last remaining buffer if it's long enough
+        if current_duration >= min_len:
+            full_segment = np.concatenate(current_segment)
+            out_path = os.path.join(output_dir, f"{base_name}_{chunk_count:04d}.wav")
+            sf.write(out_path, full_segment, target_sr)
+            chunk_count += 1
+        
+        # FINAL CHECK: If VAD produced 0 chunks (maybe all were too short?), force fixed slicing
+        if chunk_count == 0:
+            print("Warning: VAD processing resulted in 0 chunks (segments likely too short). Fallback to fixed slicing.")
+            use_fixed_slicing = True
+
+    if use_fixed_slicing:
+        # Simple fixed-length slicing (10s chunks with 1s overlap)
+        chunk_len = 10 * target_sr
+        hop_len = 9 * target_sr
+        for start in range(0, len(y) - chunk_len, hop_len):
+            segment = y[start : start + chunk_len]
             out_path = os.path.join(output_dir, f"{base_name}_{chunk_count:04d}.wav")
             sf.write(out_path, segment, target_sr)
             chunk_count += 1
             
+        # Handle the remainder if it's long enough
+        last_start = (len(y) // hop_len) * hop_len
+        if len(y) - last_start >= min_len * target_sr:
+             segment = y[last_start:]
+             out_path = os.path.join(output_dir, f"{base_name}_{chunk_count:04d}.wav")
+             sf.write(out_path, segment, target_sr)
+             chunk_count += 1
+            
+    else:
+        # This block was moved into "if not use_fixed_slicing" above
+        pass
+            
     return chunk_count
 
 def prepare_dataset():
-    print("--- Preparing Oxxxymiron Rapper Dataset ---")
+    print("--- Preparing Oxxxymiron Rapper Dataset (Advanced Preprocessing) ---")
     
     source_file = "datasets/oxxxymiron_dataset_raw.wav"
-    target_dir = "datasets/rapper_finetune"
+    # New output directory
+    target_dir = "datasets/rapper_finetune_preprocessed"
     
     if not os.path.exists(source_file):
-        # Check if it's in the root
         if os.path.exists("oxxxymiron_dataset_raw.wav"):
             source_file = "oxxxymiron_dataset_raw.wav"
         else:
@@ -82,7 +171,6 @@ def prepare_dataset():
     # 2. Generate Training Script
     russian_ckpt = "runs/russian_finetune_small_v3/ft_model.pth"
     if not os.path.exists(russian_ckpt):
-        # Fallback to older version if v3 isn't there
         russian_ckpt = "runs/russian_finetune_small/ft_model.pth"
         
     use_russian_base = os.path.exists(russian_ckpt)
@@ -112,7 +200,7 @@ python train.py ^
     --config "{config_path}" ^
     --pretrained-ckpt "{pretrained_path}" ^
     --dataset-dir "{target_dir}" ^
-    --run-name "rapper_oxxxy_finetune" ^
+    --run-name "rapper_oxxxy_finetune_v2" ^
     --batch-size 4 ^
     --max-epochs 100 ^
     --save-every 200 ^
@@ -120,10 +208,11 @@ python train.py ^
 
 echo.
 echo Training Finished!
-echo Checkpoint: runs/rapper_oxxxy_finetune/ft_model.pth
+echo Checkpoint: runs/rapper_oxxxy_finetune_v2/ft_model.pth
 pause
 """
-        batch_file = os.path.join(os.path.dirname(__file__), "train_rapper.bat")
+        # Save bat file with a new name to distinguish
+        batch_file = os.path.join(os.path.dirname(__file__), "train_rapper_preprocessed.bat")
         with open(batch_file, "w") as f:
             f.write(batch_content)
         print(f"Created training script: {batch_file}")

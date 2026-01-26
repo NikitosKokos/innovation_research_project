@@ -31,8 +31,16 @@ class NoisereduceDenoiser(BaseDenoiser):
             # noisereduce expects shape (channels, samples) or (samples,)
             # standard usage: reduce_noise(y=audio_data, sr=sample_rate)
             try:
-                # stationary=True uses a statistical approach to find the noise profile across the whole file
-                return self.nr.reduce_noise(y=audio, sr=self.sr, stationary=self.stationary, prop_decrease=self.prop_decrease)
+                # STATIONARY=FALSE is much better for Rap/Vocals where noise profile changes or is masked by beats
+                # prop_decrease=0.7 is safer than 1.0 to avoid "musical noise" (squeaky artifacts)
+                return self.nr.reduce_noise(
+                    y=audio, 
+                    sr=self.sr, 
+                    stationary=False, 
+                    prop_decrease=0.7,
+                    n_fft=2048,
+                    hop_length=512
+                )
             except Exception as e:
                 print(f"noisereduce failed: {e}. using fallback.")
                 return self.fallback.denoise(audio)

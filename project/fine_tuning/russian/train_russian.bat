@@ -20,10 +20,11 @@ python train.py ^
     --config "configs/presets/config_dit_mel_seed_uvit_whisper_small_wavenet.yml" ^
     --dataset-dir "datasets/russian_finetune" ^
     --run-name "russian_finetune_small_v3" ^
+    --pretrained-ckpt "runs/russian_finetune_small_v3/ft_model.pth" ^
     --batch-size 4 ^
     --num-workers 2 ^
-    --max-epochs 20 ^
-    --max-steps 10000 ^
+    --max-epochs 100 ^
+    --max-steps 50000 ^
     --save-every 500 ^
     --gpu 0
 
