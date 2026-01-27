@@ -3,10 +3,17 @@ import sys
 import torch
 import shutil
 import librosa
-import torchaudio
+try:
+    import torchaudio
+    import torchaudio.transforms as T
+    TORCHAUDIO_AVAILABLE = True
+except (ImportError, OSError) as e:
+    TORCHAUDIO_AVAILABLE = False
+    torchaudio = None
+    T = None
+    print(f"Warning: torchaudio not available ({e}). Using librosa fallbacks.")
 import numpy as np
 import soundfile as sf
-import torchaudio.transforms as T
 
 # Add root directory to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
@@ -33,12 +40,34 @@ def get_embedding(path, model, device):
     
     # Resample to 16k
     if sr != 16000:
-        wav = T.Resample(sr, 16000)(wav)
+        if TORCHAUDIO_AVAILABLE:
+            wav = T.Resample(sr, 16000)(wav)
+        else:
+            # Fallback to librosa resampling
+            wav_np = wav.numpy()
+            wav_np = librosa.resample(wav_np, orig_sr=sr, target_sr=16000)
+            wav = torch.from_numpy(wav_np).float()
+            sr = 16000
         
     if wav.ndim == 1: wav = wav.unsqueeze(0)
     
     wav = wav.to(device)
-    feat = torchaudio.compliance.kaldi.fbank(wav, num_mel_bins=80, dither=0, sample_frequency=16000)
+    if TORCHAUDIO_AVAILABLE:
+        feat = torchaudio.compliance.kaldi.fbank(wav, num_mel_bins=80, dither=0, sample_frequency=16000)
+    else:
+        # Fallback: use librosa mel spectrogram as approximation
+        wav_np = wav.squeeze(0).cpu().numpy()
+        feat = librosa.feature.melspectrogram(
+            y=wav_np,
+            sr=16000,
+            n_mels=80,
+            fmin=0,
+            fmax=8000,
+            n_fft=512,
+            hop_length=160
+        )
+        # Convert to log scale and transpose to match kaldi format (time, freq)
+        feat = torch.tensor(np.log(feat.T + 1e-10), dtype=torch.float32).to(device)
     feat = feat - feat.mean(dim=0, keepdim=True)
     
     with torch.no_grad():
@@ -103,7 +132,12 @@ def run_inference(source, target, output_path, checkpoint, config, device_str, f
         cmd += ["--checkpoint", str(checkpoint)]
         
     print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    # Add timeout (5 minutes max for inference)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    except subprocess.TimeoutExpired:
+        print(f"Inference timed out after 5 minutes")
+        return False
     
     if result.returncode != 0:
         print(f"Inference failed with error:\n{result.stderr}")

@@ -1,0 +1,30 @@
+{
+    "timestamp": "2026-01-23T16:17:17.998672",
+    "configuration": {
+        "input_device": "pulse",
+        "output_device": "pulse",
+        "samplerate": 44100,
+        "blocksize": 512,
+        "channels": 1
+    },
+    "performance": {
+        "avg_latency_ms": 34.47,
+        "min_latency_ms": 13.88,
+        "max_latency_ms": 40.32,
+        "jitter_ms": 10.92,
+        "buffer_duration_ms": 11.61,
+        "total_blocks_processed": 14,
+        "test_duration_seconds": 9.44
+    },
+    "raw_measurements_sample": [
+        40.32,
+        40.29,
+        40.32,
+        40.29,
+        40.29,
+        40.32,
+        40.32,
+        13.88,
+        14.2
+    ]
+}

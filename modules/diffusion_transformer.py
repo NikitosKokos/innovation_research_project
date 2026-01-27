@@ -140,6 +140,7 @@ class Transformer(nn.Module):
                 context: Optional[Tensor] = None,
                 context_input_pos: Optional[Tensor] = None,
                 cross_attention_mask: Optional[Tensor] = None,
+                skip_layers: Optional[list] = None
                 ) -> Tensor:
         assert self.freqs_cis is not None, "Caches must be initialized first"
         if mask is None: # in case of non-causal model
@@ -155,8 +156,14 @@ class Transformer(nn.Module):
             context_freqs_cis = None
         skip_in_x_list = []
         for i, layer in enumerate(self.layers):
+            if skip_layers is not None and i in skip_layers:
+                continue
             if self.uvit_skip_connection and i in self.layers_receive_skip:
-                skip_in_x = skip_in_x_list.pop(-1)
+                if len(skip_in_x_list) > 0:
+                    skip_in_x = skip_in_x_list.pop(-1)
+                else:
+                    # Handle case where emitter layer was skipped
+                    skip_in_x = None
             else:
                 skip_in_x = None
             x = layer(x, c, input_pos, freqs_cis, mask, context, context_freqs_cis, cross_attention_mask, skip_in_x)
@@ -522,7 +529,7 @@ class DiT(torch.nn.Module):
 
     def setup_caches(self, max_batch_size, max_seq_length):
         self.transformer.setup_caches(max_batch_size, max_seq_length, use_kv_cache=False)
-    def forward(self, x, prompt_x, x_lens, t, style, cond, mask_content=False):
+    def forward(self, x, prompt_x, x_lens, t, style, cond, mask_content=False, skip_layers=None):
         class_dropout = False
         if self.training and torch.rand(1) < self.class_dropout_prob:
             class_dropout = True
@@ -557,7 +564,7 @@ class DiT(torch.nn.Module):
         x_mask = sequence_mask(x_lens + self.style_as_token + self.time_as_token).to(x.device).unsqueeze(1)
         input_pos = self.input_pos[:x_in.size(1)]  # (T,)
         x_mask_expanded = x_mask[:, None, :].repeat(1, 1, x_in.size(1), 1) if not self.is_causal else None
-        x_res = self.transformer(x_in, t1.unsqueeze(1), input_pos, x_mask_expanded)
+        x_res = self.transformer(x_in, t1.unsqueeze(1), input_pos, x_mask_expanded, skip_layers=skip_layers)
         x_res = x_res[:, 1:] if self.time_as_token else x_res
         x_res = x_res[:, 1:] if self.style_as_token else x_res
         if self.long_skip_connection:

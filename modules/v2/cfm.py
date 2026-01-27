@@ -22,6 +22,7 @@ class CFM(torch.nn.Module):
                   temperature=1.0,
                   inference_cfg_rate=[0.5, 0.5],
                   random_voice=False,
+                  skip_layers=None,
                   ):
         """Forward diffusion
 
@@ -37,6 +38,7 @@ class CFM(torch.nn.Module):
             n_timesteps (int): number of diffusion steps
             temperature (float, optional): temperature for scaling noise. Defaults to 1.0.
             inference_cfg_rate (float, optional): Classifier-Free Guidance inference introduced in VoiceBox. Defaults to 0.5.
+            skip_layers (list, optional): List of layers to skip during inference.
 
         Returns:
             sample: generated mel-spectrogram
@@ -46,8 +48,8 @@ class CFM(torch.nn.Module):
         z = torch.randn([B, self.in_channels, T], device=mu.device) * temperature
         t_span = torch.linspace(0, 1, n_timesteps + 1, device=mu.device)
         t_span = t_span + (-1) * (torch.cos(torch.pi / 2 * t_span) - 1 + t_span)
-        return self.solve_euler(z, x_lens, prompt, mu, style, t_span, inference_cfg_rate, random_voice)
-    def solve_euler(self, x, x_lens, prompt, mu, style, t_span, inference_cfg_rate=[0.5, 0.5], random_voice=False,):
+        return self.solve_euler(z, x_lens, prompt, mu, style, t_span, inference_cfg_rate, random_voice, skip_layers)
+    def solve_euler(self, x, x_lens, prompt, mu, style, t_span, inference_cfg_rate=[0.5, 0.5], random_voice=False, skip_layers=None):
         """
         Fixed euler solver for ODEs.
         Args:
@@ -65,6 +67,7 @@ class CFM(torch.nn.Module):
             inference_cfg_rate (float, optional): Classifier-Free Guidance inference introduced in VoiceBox. Defaults to 0.5.
             sway_sampling (bool, optional): Sway sampling. Defaults to False.
             amo_sampling (bool, optional): AMO sampling. Defaults to False.
+            skip_layers (list, optional): List of layers to skip.
         """
         t, _, dt = t_span[0], t_span[-1], t_span[1] - t_span[0]
 
@@ -82,11 +85,12 @@ class CFM(torch.nn.Module):
                     torch.cat([t.unsqueeze(0), t.unsqueeze(0)], dim=0),
                     torch.cat([torch.zeros_like(style), torch.zeros_like(style)], dim=0),
                     torch.cat([mu, torch.zeros_like(mu)], dim=0),
+                    skip_layers=skip_layers,
                 )
                 cond_txt, uncond = cfg_dphi_dt[0:1], cfg_dphi_dt[1:2]
                 dphi_dt = ((1.0 + inference_cfg_rate[0]) * cond_txt - inference_cfg_rate[0] * uncond)
             elif all(i == 0 for i in inference_cfg_rate):
-                dphi_dt = self.estimator(x, prompt_x, x_lens, t.unsqueeze(0), style, mu)
+                dphi_dt = self.estimator(x, prompt_x, x_lens, t.unsqueeze(0), style, mu, skip_layers=skip_layers)
             elif inference_cfg_rate[0] == 0:
                 # Classifier-Free Guidance inference introduced in VoiceBox
                 cfg_dphi_dt = self.estimator(
@@ -96,6 +100,7 @@ class CFM(torch.nn.Module):
                     torch.cat([t.unsqueeze(0), t.unsqueeze(0)], dim=0),
                     torch.cat([style, torch.zeros_like(style)], dim=0),
                     torch.cat([mu, mu], dim=0),
+                    skip_layers=skip_layers,
                 )
                 cond_txt_spk, cond_txt = cfg_dphi_dt[0:1], cfg_dphi_dt[1:2]
                 dphi_dt = ((1.0 + inference_cfg_rate[1]) * cond_txt_spk - inference_cfg_rate[1] * cond_txt)
@@ -107,6 +112,7 @@ class CFM(torch.nn.Module):
                     torch.cat([t.unsqueeze(0), t.unsqueeze(0)], dim=0),
                     torch.cat([style, torch.zeros_like(style)], dim=0),
                     torch.cat([mu, torch.zeros_like(mu)], dim=0),
+                    skip_layers=skip_layers,
                 )
                 cond_txt_spk, uncond = cfg_dphi_dt[0:1], cfg_dphi_dt[1:2]
                 dphi_dt = ((1.0 + inference_cfg_rate[0]) * cond_txt_spk - inference_cfg_rate[0] * uncond)
@@ -119,6 +125,7 @@ class CFM(torch.nn.Module):
                     torch.cat([t.unsqueeze(0), t.unsqueeze(0), t.unsqueeze(0)], dim=0),
                     torch.cat([style, torch.zeros_like(style), torch.zeros_like(style)], dim=0),
                     torch.cat([mu, mu, torch.zeros_like(mu)], dim=0),
+                    skip_layers=skip_layers,
                 )
                 cond_txt_spk, cond_txt, uncond = cfg_dphi_dt[0:1], cfg_dphi_dt[1:2], cfg_dphi_dt[2:3]
                 dphi_dt = (1.0 + inference_cfg_rate[0] + inference_cfg_rate[1]) * cond_txt_spk - \

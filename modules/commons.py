@@ -3,6 +3,21 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
+
+# Monkey-patch torch.distributed for Jetson (fixes missing ReduceOp in some builds)
+import torch.distributed as dist
+if not hasattr(dist, 'ReduceOp'):
+    class MockReduceOp:
+        SUM = 0; PRODUCT = 1; MIN = 2; MAX = 3; BAND = 4; BOR = 5; BXOR = 6; AVG = 7
+    dist.ReduceOp = MockReduceOp
+
+# Monkey-patch torch.library for Jetson (fixes missing register_fake in some builds)
+if not hasattr(torch.library, 'register_fake'):
+    def register_fake(op_name):
+        def decorator(func):
+            return func
+        return decorator
+    torch.library.register_fake = register_fake
 from munch import Munch
 import json
 import argparse

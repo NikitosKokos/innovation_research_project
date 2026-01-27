@@ -16,9 +16,47 @@ def main():
     
     # 1. Load Configuration
     config = Config()
-    print(f"\n[Config] Target Voice: {config.TARGET_VOICE_PATH}")
-    print(f"[Config] Block Size:   {config.BLOCK_SIZE}")
-    print(f"[Config] Device:       {config.DEVICE}")
+    use_optimized = getattr(config, 'USE_OPTIMIZED_MODEL', False)
+    
+    if use_optimized:
+        print(f"\n[Config] Using Optimized Model: {config.CHECKPOINT_PATH}")
+    else:
+        print(f"\n[Config] Using Original Model: {config.CHECKPOINT_PATH}")
+    
+    print(f"[Config] Target Voice:    {config.TARGET_VOICE_PATH}")
+    print(f"[Config] Block Size:      {config.BLOCK_SIZE} samples (~{config.BLOCK_SIZE/config.SAMPLE_RATE*1000:.1f}ms)")
+    print(f"[Config] Diffusion Steps: {config.DIFFUSION_STEPS} (optimized for Jetson Nano)")
+    print(f"[Config] CFG Rate:         {config.INFERENCE_CFG_RATE} (0.0 = faster, 0.7 = better quality)")
+    print(f"[Config] Device:          {config.DEVICE}")
+    print(f"[Config] FP16:            {config.FP16} (using autocast for safety)")
+    print(f"[Config] TensorRT:        {getattr(config, 'USE_TENSORRT', False)}")
+    print(f"\n[Info] Optimizations for Jetson Nano:")
+    print(f"       - Diffusion steps: {config.DIFFUSION_STEPS} (6 = best quality, 3 = faster)")
+    print(f"       - CFG rate: {config.INFERENCE_CFG_RATE} (0.3 = good quality, 0.7 = best)")
+    print(f"       - Chunks to accumulate: {getattr(config, 'CHUNKS_TO_ACCUMULATE', 6)} (reduces lag)")
+    print(f"       - Block size: {config.BLOCK_SIZE} samples (~{config.BLOCK_SIZE/config.SAMPLE_RATE*1000:.1f}ms @ {config.SAMPLE_RATE}Hz)")
+    print(f"       - Whisper on GPU (faster processing, falls back to CPU if needed)")
+    print(f"       - CAM++ on GPU (faster processing, falls back to CPU if needed)")
+    print(f"       - FP16: {'ENABLED' if config.FP16 else 'DISABLED'} (disabled by default to prevent memory issues)")
+    print(f"       - Quantization: {'ENABLED' if getattr(config, 'ENABLE_QUANTIZATION', False) else 'DISABLED'} ({getattr(config, 'QUANTIZATION_TYPE', 'none')})")
+    print(f"       - Output gain: {getattr(config, 'OUTPUT_GAIN', 1.0)}x")
+    print(f"       - Lite preprocessing: DISABLED")
+    print(f"       - Queue size limited to prevent memory buildup")
+    if getattr(config, 'PASSTHROUGH_MODE', False):
+        print(f"       - ⚠️  PASSTHROUGH MODE: Audio I/O test (no voice conversion)")
+    if getattr(config, 'USE_TENSORRT', False):
+        print(f"       - TensorRT: ENABLED (faster inference)")
+    else:
+        print(f"       - TensorRT: DISABLED (see TENSORRT_SETUP.md to enable)")
+    
+    # Check if model exists
+    if not os.path.exists(config.CHECKPOINT_PATH):
+        print(f"\n[Error] Model not found: {config.CHECKPOINT_PATH}")
+        if use_optimized:
+            print("Please run edge optimization first:")
+            print("  python project/edge_optimization/find_optimal_config.py")
+            print("\nOr set USE_OPTIMIZED_MODEL = False in config.py to use the original model")
+        return
     
     if not os.path.exists(config.TARGET_VOICE_PATH):
         print(f"\n[Error] Target voice file not found: {config.TARGET_VOICE_PATH}")

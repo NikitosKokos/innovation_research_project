@@ -33,3 +33,12 @@ AI_models/
 
 # fine-tuning
 datasets/
+
+# model files
+*.pth
+*.onnx
+*.bin
+project/edge_optimization/temp_optimized_models/
+
+extra_libs/
+audio/

@@ -1,5 +1,10 @@
 import torch
-import torchaudio
+try:
+    import torchaudio
+    TORCHAUDIO_AVAILABLE = True
+except (ImportError, OSError) as e:
+    TORCHAUDIO_AVAILABLE = False
+    print(f"Warning: torchaudio not available ({e}). Using librosa fallbacks.")
 import librosa
 import numpy as np
 from pydub import AudioSegment
@@ -352,8 +357,15 @@ class SeedVCWrapper:
         ref_audio = torch.tensor(ref_audio[:sr * 25]).unsqueeze(0).float().to(self.device)
         
         # Resample to 16kHz for feature extraction
-        ref_waves_16k = torchaudio.functional.resample(ref_audio, sr, 16000)
-        converted_waves_16k = torchaudio.functional.resample(source_audio, sr, 16000)
+        if TORCHAUDIO_AVAILABLE:
+            ref_waves_16k = torchaudio.functional.resample(ref_audio, sr, 16000)
+            converted_waves_16k = torchaudio.functional.resample(source_audio, sr, 16000)
+        else:
+            # Fallback to librosa resampling
+            ref_audio_np = ref_audio.squeeze(0).cpu().numpy()
+            converted_audio_np = source_audio.squeeze(0).cpu().numpy()
+            ref_waves_16k = torch.tensor(librosa.resample(ref_audio_np, orig_sr=sr, target_sr=16000), dtype=torch.float32).unsqueeze(0).to(self.device)
+            converted_waves_16k = torch.tensor(librosa.resample(converted_audio_np, orig_sr=sr, target_sr=16000), dtype=torch.float32).unsqueeze(0).to(self.device)
         
         # Extract Whisper features
         S_alt = self._process_whisper_features(converted_waves_16k, is_source=True)
@@ -368,12 +380,27 @@ class SeedVCWrapper:
         target2_lengths = torch.LongTensor([mel2.size(2)]).to(mel2.device)
         
         # Compute style features
-        feat2 = torchaudio.compliance.kaldi.fbank(
-            ref_waves_16k,
-            num_mel_bins=80,
-            dither=0,
-            sample_frequency=16000
-        )
+        if TORCHAUDIO_AVAILABLE:
+            feat2 = torchaudio.compliance.kaldi.fbank(
+                ref_waves_16k,
+                num_mel_bins=80,
+                dither=0,
+                sample_frequency=16000
+            )
+        else:
+            # Fallback: use librosa mel spectrogram as approximation
+            ref_waves_16k_np = ref_waves_16k.squeeze(0).cpu().numpy()
+            feat2 = librosa.feature.melspectrogram(
+                y=ref_waves_16k_np,
+                sr=16000,
+                n_mels=80,
+                fmin=0,
+                fmax=8000,
+                n_fft=512,
+                hop_length=160
+            )
+            # Convert to log scale and transpose to match kaldi format (time, freq)
+            feat2 = torch.tensor(np.log(feat2.T + 1e-10), dtype=torch.float32)
         feat2 = feat2 - feat2.mean(dim=0, keepdim=True)
         style2 = self.campplus_model(feat2.unsqueeze(0))
         

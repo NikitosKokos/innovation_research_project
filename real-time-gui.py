@@ -420,6 +420,11 @@ if __name__ == "__main__":
                     shutil.copy("configs/config.json", "configs/inuse/config.json")
                 with open("configs/inuse/config.json", "r") as j:
                     data = json.load(j)
+                    # Force update for Jetson Nano optimization
+                    if data.get("block_time", 0) < 2.0:
+                        data["block_time"] = 3.0
+                    if data.get("diffusion_steps", 10) > 6:
+                        data["diffusion_steps"] = 6
                     data["sr_model"] = data["sr_type"] == "sr_model"
                     data["sr_device"] = data["sr_type"] == "sr_device"
                     if data["sg_hostapi"] in self.hostapis:
@@ -456,12 +461,12 @@ if __name__ == "__main__":
                             self.output_devices_indices.index(sd.default.device[1])
                         ],
                         "sr_type": "sr_model",
-                        "block_time": 0.3,
+                        "block_time": 3.0,
                         "crossfade_length": 0.04,
                         "extra_time_ce": 2.5,
                         "extra_time": 0.5,
                         "extra_time_right": 0.02,
-                        "diffusion_steps": 10,
+                        "diffusion_steps": 6,
                         "inference_cfg_rate": 0.7,
                         "max_prompt_length": 3.0,
                     }
@@ -584,7 +589,7 @@ if __name__ == "__main__":
                                     key="diffusion_steps",
                                     resolution=1,
                                     orientation="h",
-                                    default_value=data.get("diffusion_steps", 10),
+                                    default_value=data.get("diffusion_steps", 6),
                                     enable_events=True,
                                 ),
                             ],
@@ -618,11 +623,11 @@ if __name__ == "__main__":
                             [
                                 sg.Text("Block time"),
                                 sg.Slider(
-                                    range=(0.04, 3.0),
+                                    range=(0.04, 6.0),
                                     key="block_time",
                                     resolution=0.02,
                                     orientation="h",
-                                    default_value=data.get("block_time", 1.0),
+                                    default_value=data.get("block_time", 3.0),
                                     enable_events=True,
                                 ),
                             ],

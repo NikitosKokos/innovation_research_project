@@ -27,8 +27,7 @@ class BASECFM(torch.nn.Module, ABC):
         else:
             self.zero_prompt_speech_token = False
 
-    @torch.inference_mode()
-    def inference(self, mu, x_lens, prompt, style, f0, n_timesteps, temperature=1.0, inference_cfg_rate=0.5):
+    def inference(self, mu, x_lens, prompt, style, f0, n_timesteps, temperature=1.0, inference_cfg_rate=0.5, skip_layers=None):
         """Forward diffusion
 
         Args:
@@ -41,6 +40,7 @@ class BASECFM(torch.nn.Module, ABC):
             spks (torch.Tensor, optional): speaker ids. Defaults to None.
                 shape: (batch_size, spk_emb_dim)
             cond: Not used but kept for future purposes
+            skip_layers (list, optional): List of layers to skip during inference.
 
         Returns:
             sample: generated mel-spectrogram
@@ -50,9 +50,9 @@ class BASECFM(torch.nn.Module, ABC):
         z = torch.randn([B, self.in_channels, T], device=mu.device) * temperature
         t_span = torch.linspace(0, 1, n_timesteps + 1, device=mu.device)
         # t_span = t_span + (-1) * (torch.cos(torch.pi / 2 * t_span) - 1 + t_span)
-        return self.solve_euler(z, x_lens, prompt, mu, style, f0, t_span, inference_cfg_rate)
+        return self.solve_euler(z, x_lens, prompt, mu, style, f0, t_span, inference_cfg_rate, skip_layers=skip_layers)
 
-    def solve_euler(self, x, x_lens, prompt, mu, style, f0, t_span, inference_cfg_rate=0.5):
+    def solve_euler(self, x, x_lens, prompt, mu, style, f0, t_span, inference_cfg_rate=0.5, skip_layers=None):
         """
         Fixed euler solver for ODEs.
         Args:
@@ -66,6 +66,7 @@ class BASECFM(torch.nn.Module, ABC):
             spks (torch.Tensor, optional): speaker ids. Defaults to None.
                 shape: (batch_size, spk_emb_dim)
             cond: Not used but kept for future purposes
+            skip_layers (list, optional): List of layers to skip during inference.
         """
         t, _, _ = t_span[0], t_span[-1], t_span[1] - t_span[0]
 
@@ -91,7 +92,7 @@ class BASECFM(torch.nn.Module, ABC):
 
                 # Perform a single forward pass for both original and CFG inputs
                 stacked_dphi_dt = self.estimator(
-                    stacked_x, stacked_prompt_x, x_lens, stacked_t, stacked_style, stacked_mu,
+                    stacked_x, stacked_prompt_x, x_lens, stacked_t, stacked_style, stacked_mu, skip_layers=skip_layers
                 )
 
                 # Split the output back into the original and CFG components
@@ -100,7 +101,7 @@ class BASECFM(torch.nn.Module, ABC):
                 # Apply CFG formula
                 dphi_dt = (1.0 + inference_cfg_rate) * dphi_dt - inference_cfg_rate * cfg_dphi_dt
             else:
-                dphi_dt = self.estimator(x, prompt_x, x_lens, t.unsqueeze(0), style, mu)
+                dphi_dt = self.estimator(x, prompt_x, x_lens, t.unsqueeze(0), style, mu, skip_layers=skip_layers)
 
             x = x + dt * dphi_dt
             t = t + dt

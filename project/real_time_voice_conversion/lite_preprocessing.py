@@ -6,7 +6,7 @@ class LitePreprocessor:
     Lightweight audio preprocessor optimized for real-time edge devices (Jetson Nano).
     Focuses on low latency (<5ms) and CPU efficiency.
     """
-    def __init__(self, sample_rate=22050, noise_gate_db=-40.0, high_pass_freq=80.0):
+    def __init__(self, sample_rate=22050, noise_gate_db=-55.0, high_pass_freq=80.0):
         self.sample_rate = sample_rate
         self.noise_gate_threshold = 10 ** (noise_gate_db / 20)
         
@@ -19,11 +19,16 @@ class LitePreprocessor:
         # State for streaming filter (zi)
         self.zi = scipy.signal.lfilter_zi(self.b, self.a)
         
+        # Noise gate state for soft attack (prevents cutting off speech starts)
+        self.gate_state = 0.0  # 0 = closed, 1 = open
+        self.attack_rate = 0.3  # How fast to open (higher = faster, but more sensitive to noise)
+        self.release_rate = 0.1  # How fast to close (lower = slower release)
+        
     def process(self, audio_chunk: np.ndarray) -> np.ndarray:
         """
         Process a chunk of audio (samples,).
         1. High-pass Filter
-        2. Noise Gate
+        2. Noise Gate (with soft attack to prevent cutting off speech starts)
         """
         # Ensure 1D array
         if audio_chunk.ndim > 1:
@@ -33,13 +38,20 @@ class LitePreprocessor:
         # Use lfilter with state to maintain continuity between chunks
         filtered_chunk, self.zi = scipy.signal.lfilter(self.b, self.a, audio_chunk, zi=self.zi)
         
-        # 2. Noise Gate (Simple Hard Gate with no attack/release for zero latency)
+        # 2. Noise Gate (Soft Gate with attack/release to catch speech starts)
         # Calculate RMS of the chunk
         rms = np.sqrt(np.mean(filtered_chunk**2))
         
-        if rms < self.noise_gate_threshold:
-            # If below threshold, mute completely
-            # For smoother gating, one could implement a soft knee, but hard gate is fastest
-            return np.zeros_like(filtered_chunk)
-            
-        return filtered_chunk
+        # Determine if we should open or close the gate
+        if rms >= self.noise_gate_threshold:
+            # Audio detected - open gate (with attack)
+            self.gate_state = min(1.0, self.gate_state + self.attack_rate)
+        else:
+            # Silence - close gate (with release)
+            self.gate_state = max(0.0, self.gate_state - self.release_rate)
+        
+        # Apply gate with smooth transition
+        # This prevents cutting off the start of speech
+        gated_chunk = filtered_chunk * self.gate_state
+        
+        return gated_chunk

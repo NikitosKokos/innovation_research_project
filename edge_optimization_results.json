@@ -1,0 +1,80 @@
+{
+  "baseline_size_mb": 374.66132068634033,
+  "results": [
+    {
+      "config_name": "Prune0%_FP16_BT0.1_ECL1.0_ECR0.02_DS6",
+      "quantization_type": "FP16",
+      "pruning_ratio": 0.0,
+      "latency_ms": 64.22850748697917,
+      "model_size_mb": 187.43121814727783,
+      "size_reduction_ratio": 49.9731603454759,
+      "speaker_similarity": 0.75,
+      "f0_correlation": 0.8,
+      "f0_rmse": 40.0,
+      "stoi_score": 0.85,
+      "success": true,
+      "model_path": "/home/ailab/Desktop/innovation_research_project/project/edge_optimization/temp_optimized_models/Prune0%_FP16_BT0.1_ECL1.0_ECR0.02_DS6.pth",
+      "error_message": ""
+    },
+    {
+      "config_name": "Prune0%_MIXED_BT0.1_ECL1.0_ECR0.02_DS6",
+      "quantization_type": "MIXED",
+      "pruning_ratio": 0.0,
+      "latency_ms": 64.57489013671875,
+      "model_size_mb": 187.43121814727783,
+      "size_reduction_ratio": 49.9731603454759,
+      "speaker_similarity": 0.75,
+      "f0_correlation": 0.8,
+      "f0_rmse": 40.0,
+      "stoi_score": 0.85,
+      "success": true,
+      "model_path": "/home/ailab/Desktop/innovation_research_project/project/edge_optimization/temp_optimized_models/Prune0%_MIXED_BT0.1_ECL1.0_ECR0.02_DS6.pth",
+      "error_message": ""
+    },
+    {
+      "config_name": "Prune0%_ONNX_FP32_BT0.1_ECL1.0_ECR0.02_DS6",
+      "quantization_type": "ONNX_FP32",
+      "pruning_ratio": 0.0,
+      "latency_ms": 0.0,
+      "model_size_mb": 0.0,
+      "size_reduction_ratio": 0.0,
+      "speaker_similarity": 0.0,
+      "f0_correlation": 0.0,
+      "f0_rmse": 1000.0,
+      "stoi_score": 0.0,
+      "success": false,
+      "model_path": "",
+      "error_message": "ONNX conversion failed: ONNX conversion failed: /home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torchaudio/__init__.py:6: UserWarning: Using torchaudio stub - full functionality not available. Install compatible torchaudio for full support.\n  warnings.warn(\"Using torchaudio stub - full functionality not available. Install compatible torchaudio for full support.\")\n/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/nn/utils/weight_norm.py:30: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.\n  warnings.warn(\"torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.\")\n/home/ailab/Desktop/innovation_research_project/modules/diffusion_transformer.py:529: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  if not self.training and mask_content:\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:77: TracerWarning: Converting a tensor to a Python float might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  ideal_length = (math.ceil(n_frames) - 1) * stride + (kernel_size - padding_total)\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:102: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  assert padding_left >= 0 and padding_right >= 0, (padding_left, padding_right)\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:104: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  max_pad = max(padding_left, padding_right)\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:106: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  if length <= max_pad:\nTraceback (most recent call last):\n  File \"/home/ailab/Desktop/innovation_research_project/project/edge_optimization/convert_to_onnx.py\", line 78, in <module>\n    convert_to_onnx(args.checkpoint, args.config, args.output)\n  File \"/home/ailab/Desktop/innovation_research_project/project/edge_optimization/convert_to_onnx.py\", line 50, in convert_to_onnx\n    torch.onnx.export(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 516, in export\n    _export(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 1613, in _export\n    graph, params_dict, torch_out = _model_to_graph(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 1139, in _model_to_graph\n    graph = _optimize_graph(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 617, in _optimize_graph\n    _C._jit_pass_canonicalize_graph_fuser_ops(graph)\nRuntimeError: 0 INTERNAL ASSERT FAILED at \"/opt/pytorch/pytorch/torch/csrc/jit/ir/alias_analysis.cpp\":615, please report a bug to PyTorch. We don't have an op for aten::add but it isn't a special case.  Argument types: Tensor, bool, int, \n\nCandidates:\n\taten::add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor\n\taten::add.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor\n\taten::add.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)\n\taten::add.Scalar_out(Tensor self, Scalar other, Scalar alpha=1, *, Tensor(a!) out) -> Tensor(a!)\n\taten::add.t(t[] a, t[] b) -> t[]\n\taten::add.str(str a, str b) -> str\n\taten::add.int(int a, int b) -> int\n\taten::add.complex(complex a, complex b) -> complex\n\taten::add.float(float a, float b) -> float\n\taten::add.int_complex(int a, complex b) -> complex\n\taten::add.complex_int(complex a, int b) -> complex\n\taten::add.float_complex(float a, complex b) -> complex\n\taten::add.complex_float(complex a, float b) -> complex\n\taten::add.int_float(int a, float b) -> float\n\taten::add.float_int(float a, int b) -> float\n\taten::add(Scalar a, Scalar b) -> Scalar\n"
+    },
+    {
+      "config_name": "Prune0%_TRT_FP16_BT0.1_ECL1.0_ECR0.02_DS6",
+      "quantization_type": "TRT_FP16",
+      "pruning_ratio": 0.0,
+      "latency_ms": 0.0,
+      "model_size_mb": 0.0,
+      "size_reduction_ratio": 0.0,
+      "speaker_similarity": 0.0,
+      "f0_correlation": 0.0,
+      "f0_rmse": 1000.0,
+      "stoi_score": 0.0,
+      "success": false,
+      "model_path": "",
+      "error_message": "ONNX conversion failed: ONNX conversion failed: /home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torchaudio/__init__.py:6: UserWarning: Using torchaudio stub - full functionality not available. Install compatible torchaudio for full support.\n  warnings.warn(\"Using torchaudio stub - full functionality not available. Install compatible torchaudio for full support.\")\n/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/nn/utils/weight_norm.py:30: UserWarning: torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.\n  warnings.warn(\"torch.nn.utils.weight_norm is deprecated in favor of torch.nn.utils.parametrizations.weight_norm.\")\n/home/ailab/Desktop/innovation_research_project/modules/diffusion_transformer.py:529: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  if not self.training and mask_content:\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:77: TracerWarning: Converting a tensor to a Python float might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  ideal_length = (math.ceil(n_frames) - 1) * stride + (kernel_size - padding_total)\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:102: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  assert padding_left >= 0 and padding_right >= 0, (padding_left, padding_right)\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:104: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  max_pad = max(padding_left, padding_right)\n/home/ailab/Desktop/innovation_research_project/modules/encodec.py:106: TracerWarning: Converting a tensor to a Python boolean might cause the trace to be incorrect. We can't record the data flow of Python values, so this value will be treated as a constant in the future. This means that the trace might not generalize to other inputs!\n  if length <= max_pad:\nTraceback (most recent call last):\n  File \"/home/ailab/Desktop/innovation_research_project/project/edge_optimization/convert_to_onnx.py\", line 78, in <module>\n    convert_to_onnx(args.checkpoint, args.config, args.output)\n  File \"/home/ailab/Desktop/innovation_research_project/project/edge_optimization/convert_to_onnx.py\", line 50, in convert_to_onnx\n    torch.onnx.export(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 516, in export\n    _export(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 1613, in _export\n    graph, params_dict, torch_out = _model_to_graph(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 1139, in _model_to_graph\n    graph = _optimize_graph(\n  File \"/home/ailab/Desktop/innovation_research_project/.venv/lib/python3.10/site-packages/torch/onnx/utils.py\", line 617, in _optimize_graph\n    _C._jit_pass_canonicalize_graph_fuser_ops(graph)\nRuntimeError: 0 INTERNAL ASSERT FAILED at \"/opt/pytorch/pytorch/torch/csrc/jit/ir/alias_analysis.cpp\":615, please report a bug to PyTorch. We don't have an op for aten::add but it isn't a special case.  Argument types: Tensor, bool, int, \n\nCandidates:\n\taten::add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor\n\taten::add.Scalar(Tensor self, Scalar other, Scalar alpha=1) -> Tensor\n\taten::add.out(Tensor self, Tensor other, *, Scalar alpha=1, Tensor(a!) out) -> Tensor(a!)\n\taten::add.Scalar_out(Tensor self, Scalar other, Scalar alpha=1, *, Tensor(a!) out) -> Tensor(a!)\n\taten::add.t(t[] a, t[] b) -> t[]\n\taten::add.str(str a, str b) -> str\n\taten::add.int(int a, int b) -> int\n\taten::add.complex(complex a, complex b) -> complex\n\taten::add.float(float a, float b) -> float\n\taten::add.int_complex(int a, complex b) -> complex\n\taten::add.complex_int(complex a, int b) -> complex\n\taten::add.float_complex(float a, complex b) -> complex\n\taten::add.complex_float(complex a, float b) -> complex\n\taten::add.int_float(int a, float b) -> float\n\taten::add.float_int(float a, int b) -> float\n\taten::add(Scalar a, Scalar b) -> Scalar\n"
+    }
+  ],
+  "optimal_config": {
+    "config_name": "Prune0%_FP16_BT0.1_ECL1.0_ECR0.02_DS6",
+    "quantization_type": "FP16",
+    "pruning_ratio": 0.0,
+    "latency_ms": 64.22850748697917,
+    "model_size_mb": 187.43121814727783,
+    "size_reduction_ratio": 49.9731603454759,
+    "speaker_similarity": 0.75,
+    "f0_correlation": 0.8,
+    "f0_rmse": 40.0,
+    "stoi_score": 0.85,
+    "success": true,
+    "model_path": "/home/ailab/Desktop/innovation_research_project/project/edge_optimization/temp_optimized_models/Prune0%_FP16_BT0.1_ECL1.0_ECR0.02_DS6.pth",
+    "error_message": ""
+  }
+}

@@ -77,6 +77,7 @@ def save_metrics(metrics, blocksize):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
         
+        
     # Find the next available index for this blocksize
     idx = 1
     while True:
