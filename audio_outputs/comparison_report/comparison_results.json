@@ -1,0 +1,47 @@
+[
+    {
+        "name": "Base Model (44kHz)",
+        "pesq": 1.0462080240249634,
+        "stoi": 0.5444101740243334,
+        "speaker_similarity": 0.7727106809616089,
+        "status": "OK",
+        "output_path": "audio_outputs\\comparison_report\\base_model_44khz.wav",
+        "spectrogram_path": "audio_outputs\\comparison_report\\mel_base_model_44khz.png"
+    },
+    {
+        "name": "Small Model (22kHz)",
+        "pesq": 1.0464218854904175,
+        "stoi": 0.5827481271800593,
+        "speaker_similarity": 0.8556450605392456,
+        "status": "OK",
+        "output_path": "audio_outputs\\comparison_report\\small_model_22khz.wav",
+        "spectrogram_path": "audio_outputs\\comparison_report\\mel_small_model_22khz.png"
+    },
+    {
+        "name": "Russian FT (Small)",
+        "pesq": 1.0494945049285889,
+        "stoi": 0.5900026830299984,
+        "speaker_similarity": 0.8305934071540833,
+        "status": "OK",
+        "output_path": "audio_outputs\\comparison_report\\russian_ft_small.wav",
+        "spectrogram_path": "audio_outputs\\comparison_report\\mel_russian_ft_small.png"
+    },
+    {
+        "name": "Rapper FT (Small)",
+        "pesq": 1.0572972297668457,
+        "stoi": 0.5506504659312378,
+        "speaker_similarity": 0.8018143177032471,
+        "status": "OK",
+        "output_path": "audio_outputs\\comparison_report\\rapper_ft_small.wav",
+        "spectrogram_path": "audio_outputs\\comparison_report\\mel_rapper_ft_small.png"
+    },
+    {
+        "name": "Rapper FT (Oxxxymiron)",
+        "pesq": 1.046900749206543,
+        "stoi": 0.48459914873372156,
+        "speaker_similarity": 0.8837388753890991,
+        "status": "OK",
+        "output_path": "audio_outputs\\comparison_report\\rapper_ft_oxxxymiron.wav",
+        "spectrogram_path": "audio_outputs\\comparison_report\\mel_rapper_ft_oxxxymiron.png"
+    }
+]

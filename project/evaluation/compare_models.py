@@ -3,6 +3,9 @@ import sys
 import torch
 import shutil
 import librosa
+import json
+import matplotlib.pyplot as plt
+import librosa.display
 try:
     import torchaudio
     import torchaudio.transforms as T
@@ -76,6 +79,31 @@ def get_embedding(path, model, device):
 
 def get_cosine_sim(emb1, emb2):
     return torch.nn.CosineSimilarity(dim=1)(emb1, emb2).item()
+
+# --- Visualization Helper ---
+
+def plot_mel_comparison(source_path, target_path, output_path, save_path, title_suffix=""):
+    """
+    Generates a 3-panel Mel Spectrogram comparison plot.
+    """
+    fig, axes = plt.subplots(3, 1, figsize=(12, 12))
+    paths = [source_path, target_path, output_path]
+    titles = ["Source (Linguistic)", "Target (Timbre)", "Converted (Combined)"]
+    
+    for i, (p, t) in enumerate(zip(paths, titles)):
+        y, sr = librosa.load(p, sr=22050)
+        S = librosa.feature.melspectrogram(y=y, sr=sr, n_mels=128, fmax=8000)
+        S_db = librosa.power_to_db(S, ref=np.max)
+        
+        img = librosa.display.specshow(S_db, x_axis='time', y_axis='mel', sr=sr, fmax=8000, ax=axes[i], cmap='viridis')
+        axes[i].set_title(f"{t} {title_suffix}")
+        if i < 2: axes[i].set_xlabel('')
+        fig.colorbar(img, ax=axes[i], format='%+2.0f dB')
+    
+    plt.tight_layout()
+    plt.savefig(save_path)
+    plt.close()
+    print(f"  -> Saved spectrogram comparison to: {save_path}")
 
 # --- Preprocessing Helper ---
 
@@ -254,20 +282,47 @@ def compare_all():
             pesq_val = compute_pesq(source_audio_16k, out_wav, sr=16000)
             stoi_val = compute_stoi(source_audio_16k, out_wav, sr=16000)
             
-            results.append((name, pesq_val, stoi_val, sim, "OK"))
+            # Generate Mel Comparison Plot
+            plot_path = os.path.join(output_dir, f"mel_{name.lower().replace(' ', '_').replace('(', '').replace(')', '')}.png")
+            plot_mel_comparison(source_cleaned_path, target_path, out_path, plot_path, title_suffix=f"({name})")
+            
+            results.append({
+                "name": name,
+                "pesq": float(pesq_val),
+                "stoi": float(stoi_val),
+                "speaker_similarity": float(sim),
+                "status": "OK",
+                "output_path": out_path,
+                "spectrogram_path": plot_path
+            })
         else:
-            results.append((name, 0.0, 0.0, 0.0, "Failed"))
+            results.append({
+                "name": name,
+                "pesq": 0.0,
+                "stoi": 0.0,
+                "speaker_similarity": 0.0,
+                "status": "Failed",
+                "output_path": None,
+                "spectrogram_path": None
+            })
 
     # --- Final Report ---
     print("\n" + "="*110)
     print(f"{'Method/Model':<25} | {'PESQ':<10} | {'STOI':<10} | {'Speaker Similarity':<20} | {'Status'}")
     print("-" * 110)
     
-    for name, pesq_val, stoi_val, sim, status in results:
-        print(f"{name:<25} | {pesq_val:.4f}{' '*4} | {stoi_val:.4f}{' '*4} | {sim:.4f}{' '*12} | {status}")
+    for r in results:
+        print(f"{r['name']:<25} | {r['pesq']:.4f}{' '*4} | {r['stoi']:.4f}{' '*4} | {r['speaker_similarity']:.4f}{' '*12} | {r['status']}")
         
     print("-" * 110)
-    print("\nPESQ Analysis Note:")
+    
+    # Save results to JSON
+    json_path = os.path.join(output_dir, "comparison_results.json")
+    with open(json_path, 'w') as f:
+        json.dump(results, f, indent=4)
+    
+    print(f"\nDetailed JSON report saved to: {json_path}")
+    print("PESQ Analysis Note:")
     print("1. 'Reconstruction' shows the model's quality limit when speaker identity is preserved.")
     print("2. 'Conversion' PESQ is naturally lower because PESQ penalizes speaker identity changes (timbre shift).")
     print("3. For PESQ > 3.2, look at 'Reconstruction (Base)' result.")

@@ -8,6 +8,7 @@ The project supports zero-shot voice conversion, meaning you can clone a voice w
 
 - **[User Manual](USER_MANUAL.md)**: A practical guide on how to use the application, including the **Real-time GUI for PC** and the **Optimized App for Jetson Nano**.
 - **[Installation Manual](INSTALLATION.md)**: Detailed "Fresh Install" instructions for Windows, Linux, macOS, and Jetson Nano (JetPack 6.0).
+- **[Appendices](APPENDICES.md)**: Technical diagrams (architecture, data flow), visual mockups, and performance visualizations.
 
 ## 🚀 Quick Start (PC)
 
