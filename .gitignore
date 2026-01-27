@@ -26,7 +26,7 @@ reconstructed/
 ruff.log
 /configs/inuse/
 runs/
-AI_models/
+# AI_models/ (Tracked via Git LFS)
 /garbages/
 /flagged/
 /experimental/
@@ -35,8 +35,9 @@ AI_models/
 datasets/
 
 # model files
-*.pth
-*.onnx
+# (pth and onnx are tracked via Git LFS in UPLOAD_MODELS_GUIDE.md)
+# *.pth
+# *.onnx
 *.bin
 project/edge_optimization/temp_optimized_models/
 

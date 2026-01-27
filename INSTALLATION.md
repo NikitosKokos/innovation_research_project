@@ -75,12 +75,20 @@ This setup is specialized for real-time inference on the NVIDIA Jetson Nano edge
 
 ## ⚙️ Configuration & Details
 
-### Reproducibility Notes
-*   **Cloud Setup**: **None required**. No Azure, AWS, or GCP resources are needed. All processing is local.
-*   **API Keys**: **None required**. The system uses open-source models downloaded directly from Hugging Face on the first run.
-*   **Environment Variables**: A `.env` file is automatically used by the system to set `OMP_NUM_THREADS=4` for CPU optimization.
+### 🏗️ Reproducibility & Cloud Requirements
+*   **Cloud Infrastructure**: **None Required**. This project is designed for local edge computing. No Azure Resource Groups, AWS buckets, or cloud API keys are necessary.
+*   **Mobile / VR Support**: **Not Applicable**. This is a research prototype designed for PC and NVIDIA Jetson Nano hardware. There is no APK or native mobile build provided; the application runs via Python environments.
+*   **API Keys & Secrets**: The system operates 100% offline after the initial model download from Hugging Face. No external proprietary APIs (like OpenAI or ElevenLabs) are used.
 
-### Troubleshooting Clean Installs
+### 📄 Environment Configuration (.env)
+A `.env` file should be created in the root directory (optional but recommended for thread control):
+```text
+OMP_NUM_THREADS=4
+MKL_NUM_THREADS=4
+CUDA_VISIBLE_DEVICES=0
+```
+
+### 🛠️ Troubleshooting Clean Installs
 *   **ModuleNotFoundError**: Ensure the virtual environment is activated.
 *   **CUDA not available**: Verify your PyTorch installation matches your CUDA version (`torch.cuda.is_available()`).
 *   **PortAudio Error**: Ensure `libportaudio2` (Linux) or `portaudio` (macOS) is installed via the system package manager.
