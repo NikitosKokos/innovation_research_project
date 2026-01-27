@@ -1,56 +1,48 @@
 # Innovation and Research Project: Voice Conversion
 
-## Project Overview
-This project focuses on **Voice Conversion (VC)**, a technology that converts the voice of a source speaker into that of a target speaker of russian hip-hop artist [Oxxxymiron](https://en.wikipedia.org/wiki/Oxxxymiron) while preserving the linguistic content and prosody. 
+This project implements a state-of-the-art Voice Conversion (VC) system based on **Seed-VC**. The primary goal is to achieve **real-time voice conversion on the NVIDIA Jetson Nano** edge device, converting a source speaker's voice into that of a target speaker (e.g., the Russian rapper Oxxxymiron) while maintaining low latency and high quality.
 
-I utilize the **Seed-VC** open-source models for this implementation. Seed-VC is a state-of-the-art voice conversion system capable of zero-shot voice conversion, meaning it can clone a voice without requiring training data for that specific speaker, all it takes is a sample of someone's voice (1-30 seconds), and it copies person's tembre, style and copies his voice.
+The project supports zero-shot voice conversion, meaning you can clone a voice with just 1-30 seconds of reference audio. It is optimized for both edge deployment and standard PC testing.
 
-## Setup Instructions
+## 📚 Documentation
 
-Follow these steps to set up the development environment.
+- **[User Manual](USER_MANUAL.md)**: A practical guide on how to use the application, including the **Real-time GUI for PC** and the **Optimized App for Jetson Nano**.
+- **[Installation Manual](INSTALLATION.md)**: Detailed "Fresh Install" instructions for Windows, Linux, macOS, and Jetson Nano (JetPack 6.0).
 
-### 1. Create a Virtual Environment (`.venv`)
+## 🚀 Quick Start (PC)
 
-It is recommended to use a virtual environment to manage dependencies.
+To run the real-time demo on a PC with the best fine-tuned model:
 
-**Windows:**
-```bash
-python -m venv .venv
-.\.venv\Scripts\activate
-```
+1.  **Setup Environment**:
+    ```bash
+    python -m venv .venv
+    source .venv/bin/activate  # (or .\venv\Scripts\activate on Windows)
+    pip install -r requirements.txt
+    ```
 
-**macOS / Linux:**
-```bash
-python3 -m venv .venv
-source .venv/bin/activate
-```
+2.  **Run the GUI**:
+    ```bash
+    python real-time-gui.py --checkpoint-path "AI_models/rapper_oxxxy_finetune/ft_model.pth" --config-path "AI_models/rapper_oxxxy_finetune/config_dit_mel_seed_uvit_whisper_small_wavenet.yml"
+    ```
 
-### 2. Install Dependencies
+## ✨ Key Features
 
-Once the virtual environment is activated, install the required packages.
+-   **Jetson Nano Optimization**: Specifically tuned for real-time inference on edge hardware using specialized buffering and model pruning.
+-   **Oxxxymiron Fine-tuned Model**: Includes a high-quality model specifically trained on the voice of the artist [Oxxxymiron](https://en.wikipedia.org/wiki/Oxxxymiron).
+-   **Zero-Shot Conversion**: Clone any voice instantly from a short audio sample without further training.
+-   **Multiple Interfaces**: Choose between a Desktop GUI (Real-time), Web UI (File processing), or Console App (Jetson optimized).
 
-**Windows and Linux:**
-```bash
-pip install -r requirements.txt
-```
+## 🧠 Model Architecture
 
-**macOS (Apple Silicon M-Series):**
-```bash
-pip install -r requirements-mac.txt
-```
+The system uses a 3-stage pipeline:
+1.  **Speech Tokenizer**: Extracts linguistic content (Whisper/XLSR).
+2.  **Diffusion Transformer (DiT)**: Generates acoustic features for the target voice.
+3.  **Vocoder**: Reconstructs high-fidelity audio (BigVGAN/HiFi-GAN).
 
-## Running the Application
+## 🟢 Jetson Nano Performance
+*   **Latency**: ~5.0s end-to-end.
+*   **Precision**: FP16 hardware acceleration.
+*   **Optimizations**: Layer skipping, TensorRT support, and reduced diffusion steps.
 
-This project provides several interfaces for voice conversion.
-
-**Integrated Web UI:**
-```bash
-python app.py --enable-v1 --enable-v2
-```
-
-**Real-time GUI:**
-```bash
-python real-time-gui.py
-```
-
-For more detailed usage, training instructions, and model descriptions, please refer to the original [Seed-VC Documentation](README_SEED_VC.md).
+## 🔗 Credits
+Based on the [Seed-VC](https://github.com/Plachtaa/seed-vc) research project and subsequent optimizations for edge computing.
